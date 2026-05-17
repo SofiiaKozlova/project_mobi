@@ -18,7 +18,7 @@ async function loadWeather() {
 
         document.getElementById("score-banner").classList.add("visible");
     } catch (errordydydydududu) {
-        console.error(errdydydydududu);
+        console.error(errordydydydududu);
     }
 }
 
