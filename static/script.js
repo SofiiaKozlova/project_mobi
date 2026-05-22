@@ -372,6 +372,100 @@ function drawRadar(canvas, weatherData, activeFilters) {
     });
 }
 
+/* SCORING */
+function parkScore(park) {
+    if (!activeWeather.size) return null;
+    let total = 0;
+    activeWeather.forEach(key => {total += park.weather[key]||0;});
+    return Math.round(total / activeWeather.size);
+}
+
+/* RENDER - cards */
+function renderAll() {
+    const grid = document.getElementById('parks-grid');
+    const empty = document.getElementById('empty-state');
+    const banner = document.getElementById('score-banner');
+    const bannerText = document.getElementById('score-banner-text');
+    let sorted = PARKS.map(p => ({park:p, score:parkScore(p)}));
+    if (activeWeather.size) {
+        sorted.sort((a,b) => b.score - a.score);
+        // keep weather label text only if it's not the live weather text
+        if (!bannerText.textContent.includes('°C')) {
+            const labels = [...activeWeather].map(k => WEATHER_LABELS[k]).join(', ');
+            bannerText.textContent = `Ranked by: ${labels}`;
+        }
+        banner.classList.add('visible');
+    }
+
+    const visible = sorted.filter(({score}) => !activeWeather.size || score >= 3);
+    grid.innerHTML = '';
+    if (!visible.length) {
+        empty.classList.add('visible');
+    } else {
+        empty.classList.remove('visible');
+        visible.forEach(({park,score}) => renderCard(park,score,grid));
+    }
+
+    document.getElementById('btn-open-compare').disabled = compareSet.size < 2;
+    document.getElementById('compare-count').textContent = compareSet.size;
+}
+
+function renderCard(park, score, grid) {
+    const card = document.createElement('div');
+    card.className = 'park-card' + (compareSet.has(park.id) ? ' compare-selected' : '');
+    card.dataset.id = park.id;
+    let badgeClass = score === null ? '' : score < 4 ? 'low' : score < 7 ? 'mid' : '';
+    const pills = Object.entries(park.weather).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([key,val]) => {
+        const cls = val>=7?'good':val<=3?'bad':'';
+        return `<span class="weather-pill ${cls}" title="${WEATHER_LABELS[key]}: ${val}/10">${weatherIcon(key)} ${WEATHER_LABELS[key]} ${val}/10</span>`;
+    }).join('');
+
+    // POI badges show a loading spinner, filled after fetch
+    const poiBadgesId = `poi-badges-${park.id}`;
+    card.innerHTML = `
+        <div class="card-compare-check ${compareSet.has(park.id)?'checked':''}" data-id="${park.id}" title="Add to compare">
+            ${compareSet.has(park.id)?'✓':'+'}
+        </div>
+        <div class="park-header">
+            <div>
+                <div class="park-name">${park.name}</div>
+                <div class="park-district">${park.district}</div>
+            <div>
+            ${score!==null?`<div class="park-score-badge ${badgeClass}">${score}/10</div>`:''}
+        </div>
+        <div class="park-radar radar-wrap">
+            <canvas width="160" height="130" class="radar-canvas"></canvas>
+        </div>
+        <div class="weather-pills">${pills}</div>
+        <div class="park-poi"><div class="poi-row" id="${poiBadgesId}">
+            <span style="font-size:0.72rem;color:#aaa">Loading nearby places...</span>
+        </div></div>
+    `;
+
+    drawRadar(card.querySelector('.radar-canvas'), park.weather, activeWeather);
+    card.addEventListener('click', e => {
+        if (e.target.closest('.card-compare-check')) return;
+        openDetail(park.id);
+        map.flyTo([park.lat, park.lon], 16, {duration: 0.8});
+    });
+    card.querySelector('.card-compare-check').addEventListener('click',e => {
+        e.stopPropagation(); toggleCompare(park.id);
+    });
+    grid.appendChild(card);
+
+    // Fetch POIs async and fill in badges
+    fetchPOIs(park).then(poi => {
+        const row = document.getElementById(poiBadgesId);
+        if (!row) return;
+        const html = Object.entries(poi).map(([cat, items]) => {
+            if (!items.length) return '';
+            const hidden = !activePoi.has(cat) ? 'hidden' : '';
+            return `<span class="poi-badge ${cat} ${hidden}">${poiIcon(cat)} ${items.length} ${cat}</span>`;
+        }).join('');
+        row.innerHTML = html || '<span style="font-size:0.72rem;color:#aaa">No POIs found nearby</span>';
+    });
+}
+
 /* //api
 //This function fetches the current temperature for Bamberg (center) and displays it in the banner on the page.
 async function loadWeather() {
