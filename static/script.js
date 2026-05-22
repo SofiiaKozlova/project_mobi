@@ -505,6 +505,46 @@ function openDetail(id) {
     document.getElementById('detail-panel').classList.add('visible');
 }
 
+function closeDetail() {
+    document.getElementById('detail-panel').classList.remove('visible');
+    setActiveMarker(null);
+    openDetailId = null;
+}
+
+/* COMPARE */
+function toggleCompare(id) {
+    if (compareSet.has(id)) {
+        compareSet.delete(id);
+    } else {
+        if (compareSet.size >= 2) {
+            const [oldest] = compareSet;
+            compareSet.delete(oldest);
+        }
+        compareSet.add(id);
+    }
+    renderAll();
+}
+
+function openCompare() {
+    if (compareSet.size < 2) return;
+    const parks = [...compareSet].map(id => PARKS.find(p => p.id === id));
+    document.getElementById('compare-grid').innerHTML = parks.map(park => `
+        <div class="compare-park-col">
+            <div class="compare-park-name">${park.name}</div>
+            ${Object.entries(park.weather).map(([key,val]) => `
+                <div class="compare-stat-row">
+                    <span class="compare-stat-label">${weatherIcon(key)} ${WEATHER_LABELS[key]}</span>
+                    <div class="compare-sat-bar-wrap">
+                        <div class="compare-stat-bar-bg">
+                            <div class="compare-stat-bar-fill" style="width:${val*10}%"></div>
+                        </div>
+                        <span class="compare-stat-val">${val}</span>
+                    </div>
+                </div>`).join('')}
+        </div>`).join('');
+    document.getElementById('compare-overlay').classList.add('visible');
+}
+
 /* //api
 //This function fetches the current temperature for Bamberg (center) and displays it in the banner on the page.
 async function loadWeather() {
