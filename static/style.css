@@ -167,6 +167,7 @@ header {
     gap: 8px;
     transition: all 0.15s;
     text-align: left;
+    opacity: 0.45;
 }
 
 .poi-filter-btn .poi-dot{
@@ -183,8 +184,10 @@ header {
 
 .poi-filter-btn.active{
     border-color: var(--green-mid);
+    background: var(--green-pale);
     color: var(--text);
     font-weight: 500;
+    opacity: 1;
 }
 
 /* Compare button */
@@ -441,7 +444,7 @@ header {
 }
 
 .poi-badge.hidden{
-    opacity: 0.2;
+    display: none;
 }
 
 /* Compare overlay */
