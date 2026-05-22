@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Deatil panel: close button
+    // Detail panel: close button
     document.getElementById('btn-detail-close').addEventListener('click', closeDetail);
 
     // Reset all filters
@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.poi-filter-btn').forEach(b => b.classList.add('active'));
         closeDetail();
-        document.getElementById('score-banner').classList.remove('visible');
+        document.getElementById('filter-banner').classList.remove('visible');
         renderAll();
     });
 });

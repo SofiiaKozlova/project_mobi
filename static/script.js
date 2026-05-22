@@ -49,7 +49,7 @@ const PARKS = [
         name: 'ERBA-Park',
         district: 'Gaustadt - north, former Landesgartenschau 2012',
         desc: " A 13.5-hectare park on the northern tip of the Regnitz Island, built on the former ERBA cotton-mill site for the 2012 Bavarian State Garden Show. Five playgrounds, open lawns, a sculpture park, and breezy waterfront on both Regnitz arms.",
-        lat: 49.9012, lan: 10.8798,
+        lat: 49.9012, lon: 10.8798,
         weather: {shade: 4, breeze: 9, rain_shelter: 2, warmth: 6, quiet: 5, open_space: 10}
     },
     {
@@ -103,7 +103,7 @@ const PARKS = [
     {
         id: 'jacobsberg',
         name: 'Jakobsberg & vineyards',
-        district: 'West Bamberg - hillside vienyard paths',
+        district: 'West Bamberg - hillside vineyard paths',
         desc: "South-facing hillside vineyard paths west of the old town. Sunny and warm with a constant gentle breeze from the exposed slope. Terraced trails lead up towards the Altenburg fortress with panoramic views.",
         lat: 49.8945, lon: 10.8791,
         weather: {shade: 3, breeze: 7, rain_shelter: 2, warmth: 10, quiet: 8, open_space: 7}
@@ -128,7 +128,7 @@ let parkMarkers = {};
 /* MAP SETUP */
 const map = L.map('map').setView([49.8988, 10.8956], 14);
 
-L.titleLayer('https://title.openstreetmap.org/{z}/{x}/{y}.png', {
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '&copy; <a href="hhtps://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
 }).addTo(map);
@@ -176,8 +176,8 @@ async function loadWeather() {
     try {
         const data = await (await fetch(url)).json();
         const { temperature: temp, weathercode: code } = data.current_weather;
-        document.getElementById('score-banner-text').innerText = `Bamberg right now: ${temp}°C - ${wmoLabel(code)}`;
-        document.getElementById('score-banner').classList.add('visible');
+        document.getElementById('weather-banner-text').innerText = `Bamberg right now: ${temp}°C - ${wmoLabel(code)}`;
+        document.getElementById('weather-banner').classList.add('visible');
     } catch (e) {
         console.error('Weather error:', e);
     }
@@ -268,7 +268,7 @@ function haversine(lat1, lon1, lat2, lon2) {
 }
 
 function classifyNode(node) {
-    const t = node.tag || {};
+    const t = node.tags || {};
     if (t.highway === 'bus_stop') return 'transit';
     if (['restaurant','cafe','biergarten'].includes(t.amenity)) return 'food';
     if (t.shop) return 'shopping';
@@ -356,7 +356,7 @@ function drawRadar(canvas, weatherData, activeFilters) {
     // Active filter highlights
     activeFilters.forEach(key => {
         const i = keys.indexOf(key); if(i<0) return;
-        const v=(weatherdata[key]||0)/10, p=pt(i,v), ep=pt(i,1);
+        const v=(weatherData[key]||0)/10, p=pt(i,v), ep=pt(i,1);
         ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(ep.x,ep.y);
         ctx.strokeStyle='#7ab648'; ctx.lineWidth=2; ctx.stroke();
         ctx.beginPath(); ctx.arc(p.x,p.y,4,0,Math.PI*2); ctx.fillStyle='#4a7c2f'; ctx.fill();
@@ -384,17 +384,17 @@ function parkScore(park) {
 function renderAll() {
     const grid = document.getElementById('parks-grid');
     const empty = document.getElementById('empty-state');
-    const banner = document.getElementById('score-banner');
-    const bannerText = document.getElementById('score-banner-text');
+    const filterBanner = document.getElementById('filter-banner');
+    const filterBannerText = document.getElementById('filter-banner-text');
     let sorted = PARKS.map(p => ({park:p, score:parkScore(p)}));
     if (activeWeather.size) {
         sorted.sort((a,b) => b.score - a.score);
         // keep weather label text only if it's not the live weather text
-        if (!bannerText.textContent.includes('°C')) {
-            const labels = [...activeWeather].map(k => WEATHER_LABELS[k]).join(', ');
-            bannerText.textContent = `Ranked by: ${labels}`;
-        }
-        banner.classList.add('visible');
+        const labels = [...activeWeather].map(k => WEATHER_LABELS[k]).join(', ');
+        filterBannerText.textContent = `Ranked by: ${labels}`;
+        filterBanner.classList.add('visible');
+    } else {
+        filterBanner.classList.remove('visible');
     }
 
     const visible = sorted.filter(({score}) => !activeWeather.size || score >= 3);
@@ -488,7 +488,7 @@ function openDetail(id) {
     poiEl.innerHTML = '<p style="font-size:0.8rem;color:#aaa">Fetching nearby places from OpenStreetMap...</p>';
 
     fetchPOIs(park).then(poi => {
-        poiEl.innerHTML = Object.entries(poi).map(([cat,items]) => {
+        const html = Object.entries(poi).map(([cat,items]) => {
             if (!items.length) return '';
             const color = POI_COLORS[cat];
             return `<div class="detail-poi-category">
@@ -500,7 +500,8 @@ function openDetail(id) {
                         <span class="detail-poi-dist">${item.dist}</span>
                     </div>`).join('')}
             </div>`;
-        }).join('') || '<p style="font-size:0.8rem;color:#aaa">No points of interest found within 400m.</p>';
+        }).join('');
+        poiEl.innerHTML = html || '<p style="font-size:0.8rem;color:#aaa">No points of interest found within 400m.</p>';
     });
     document.getElementById('detail-panel').classList.add('visible');
 }
@@ -534,7 +535,7 @@ function openCompare() {
             ${Object.entries(park.weather).map(([key,val]) => `
                 <div class="compare-stat-row">
                     <span class="compare-stat-label">${weatherIcon(key)} ${WEATHER_LABELS[key]}</span>
-                    <div class="compare-sat-bar-wrap">
+                    <div class="compare-stat-bar-wrap">
                         <div class="compare-stat-bar-bg">
                             <div class="compare-stat-bar-fill" style="width:${val*10}%"></div>
                         </div>
@@ -634,7 +635,7 @@ async function loadRainMap() {
 
 
 //functions
-initParkmarkers();
+initParkMarkers();
 loadWeather();
 loadRainMap();
 renderAll();
