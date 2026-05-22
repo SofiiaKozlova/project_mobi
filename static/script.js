@@ -194,7 +194,185 @@ function wmoLabel(code) {
     return 'Variable 🌤️';
 }
 
-//api
+/* LIVE RAIN OVERLAY - open-meteo hourly */
+function getBerlinHour() {
+    return new Date().toLocaleString('sv-SE', {timeZone: 'Europe/Berlin'}).slice(0,13) + ':00:00';
+}
+
+const RAIN_POINTS = [
+    {name: 'Centre', lat: 49.890, lon: 10.890},
+    {name: 'North', lat: 49.910, lon: 10.890},
+    {name: 'South', lat: 49.870, lon: 10.890},
+    {name: 'West', lat: 49.890, lon: 10.860},
+    {name: 'East', lat: 49.890, lon: 10.920}
+];
+
+async function loadRainMap () {
+    const hour = getBerlinHour();
+    for (const pt of RAIN_POINTS) {
+        try {
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${pt.lat}&longitude=${pt.lon}&hourly=precipitation,precipitation_probability&timezone=Europe/Berlin`;
+            const data = await (await fetch(url)).json();
+            const idx = data.hourly.time.indexOf(hour);
+            const rain = idx >= 0 ? data.hourly.precipitation[idx] : 0;
+            const prob = idx >= 0 ? data.hourly.precipitation_probability[idx] : 0;
+            L.circleMarker([pt.lat, pt.lon], {
+                radius: 14, weight: 2,
+                color: 'white',
+                fillColor: (rain > 0.1 || prob > 50) ? '#4a86e8' : '#7ab648',
+                fillOpacity: 0.5
+            }).addTo(map).bindPopup(`<b>${pt.name}</b><br>${rain} mm · ${prob}% chance`);
+        } catch(e) {console.error('Rain error:', e);}
+    }
+}
+
+/* ============================================================
+   AUTOMATED POI FETCH — Overpass API (OpenStreetMap, no key)
+ 
+   For each park we query OSM for real nearby:
+   - Bus stops      (highway=bus_stop)
+   - Restaurants / cafés (amenity=restaurant|cafe|biergarten)
+   - Shops          (shop=*)
+   - Sights         (tourism=attraction|museum|viewpoint|historic)
+   - Playgrounds    (leisure=playground)
+ 
+   Results are ranked by distance and capped at 3 per category.
+   ============================================================ */
+const OSM_RADIUS = 400; //metres around park centre
+
+function overpassUrl(lat, lon) {
+    const r = OSM_RADIUS;
+    const q = `
+    [out:json][timeout:10];
+    (
+        node["highway"="bus_stop"](around:${r},${lat},${lon});
+        node["amenity"~"restaurant|cafe|biergarten"](around:${r},${lat},${lon});
+        node["shop"](around:${r},${lat},${lon});
+        node["tourism"~"attraction|museum|viewpoint"](around:${r},${lat},${lon});
+        node["historic"](around:${r},${lat},${lon});
+        node["leisure"="playground"](around:${r},${lat},${lon});
+    );
+    out body;`;
+    return `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(q)}`;
+}
+
+function distLabel(metres) {
+    return metres < 50 ? 'in park' : metres < 1000 ? `${Math.round(metres)}m` : `${(metres/1000).toFixed(1)}km`;
+}
+
+function haversine(lat1, lon1, lat2, lon2) {
+    const R = 6371000, toRad = d => d * Math.PI / 180;
+    const dLat = toRad(lat2-lat1), dLon = toRad(lon2-lon1);
+    const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function classifyNode(node) {
+    const t = node.tag || {};
+    if (t.highway === 'bus_stop') return 'transit';
+    if (['restaurant','cafe','biergarten'].includes(t.amenity)) return 'food';
+    if (t.shop) return 'shopping';
+    if (t.leisure === 'playground') return 'playground';
+    if (t.tourism || t.historic) return 'sightseeing';
+    return null;
+}
+
+function nodeName(node) {
+    const t = node.tags || {};
+    return t.name || t['name:en'] || t.amenity || t.shop || t.tourism || t.historic || 'Unnamed';
+}
+
+// Cache so we don't re-fetch when detail panel re-opens
+const poiCache = {};
+
+async function fetchPOIs(park){
+    if (poiCache[park.id]) return poiCache[park.id];
+    const poi = {transit: [], food: [], shopping: [], sightseeing: [], playground: []};
+    try {
+        const res = await fetch(overpassUrl(park.lat, park.lon));
+        const data = await res.json();
+        data.elements.forEach(node => {
+            const cat = classifyNode(node);
+            if (!cat) return;
+            const dist = Math.round(haversine(park.lat, park.lon, node.lat, node.lon));
+            poi[cat].push({name: nodeName(node), dist: distLabel(dist), _dist: dist});
+        });
+
+        // sort by distance, keep top 3 per category
+        Object.keys(poi).forEach(cat => {
+            poi[cat].sort((a,b) => a._dist - b._dist);
+            poi[cat] = poi[cat].slice(0,3).map(({name, dist}) => ({name, dist}));
+        });
+    } catch (e) {
+        console.warn(`POI fetch failed for ${park.name}:`, e);
+    }
+
+    poiCache[park.id] = poi;
+    return poi;
+}
+
+/* HELPERS */
+function weatherIcon(key) {
+    return { shade:'🌳', breeze:'💨', rain_shelter:'☔', warmth:'☀️', quiet:'🤫', open_space:'🏞️' }[key] || '•';
+}
+
+function poiIcon(cat) {
+    return { transit:'🚌', food:'🍽️', shopping:'🛍️', sightseeing:'🏛️', playground:'🛝' }[cat] || '•';
+}
+
+/* RADAR CHART */
+function drawRadar(canvas, weatherData, activeFilters) {
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    const cx = W/2, cy = H/2, r = Math.min(W,H)/2 -22;
+    ctx.clearRect(0,0,W,H);
+    const keys = Object.keys(WEATHER_LABELS);
+    const n = keys.length;
+    const step = (Math.PI*2)/n, start = -Math.PI/2;
+    const pt = (i, ratio) => ({
+        x: cx + Math.cos(start + i*step)*r*ratio,
+        y: cy + Math.sin(start + i*step)*r*ratio
+    });
+
+    // Grid rings
+    [0.25,0.5,0.75,1].forEach(ratio => {
+        ctx.beginPath();
+        keys.forEach((_, i) => {const p=pt(i, ratio); i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y);});
+        ctx.closePath(); ctx.strokeStyle='rgba(90,107,82,0.15)'; ctx.lineWidth=1; ctx.stroke();
+    });
+
+    // Spokes
+    keys.forEach((_,i) => {
+        const p=pt(i,1); ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(p.x,p.y);
+        ctx.strokeStyle='rgba(90,107,82,0.15)'; ctx.lineWidth=1; ctx.stroke();
+    });
+
+    // Data polygon
+    ctx.beginPath();
+    keys.forEach((key,i) => {const p=pt(i,(weatherData[key]||0)/10); i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y);});
+    ctx.closePath(); ctx.fillStyle='rgba(122,182,72,0.2)'; ctx.fill();
+    ctx.strokeStyle='#4a7c2f'; ctx.lineWidth=1.5; ctx.stroke();
+
+    // Active filter highlights
+    activeFilters.forEach(key => {
+        const i = keys.indexOf(key); if(i<0) return;
+        const v=(weatherdata[key]||0)/10, p=pt(i,v), ep=pt(i,1);
+        ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(ep.x,ep.y);
+        ctx.strokeStyle='#7ab648'; ctx.lineWidth=2; ctx.stroke();
+        ctx.beginPath(); ctx.arc(p.x,p.y,4,0,Math.PI*2); ctx.fillStyle='#4a7c2f'; ctx.fill();
+    });
+
+    // Labels
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    keys.forEach((key,i) => {
+        const p=pt(i,1.28), active=activeFilters.has(key);
+        ctx.fillStyle=active?'#2d4a1e':'#8a9b82';
+        ctx.font=(active?'bold ':'')+'9px DM Sans, sans-serif';
+        ctx.fillText(WEATHER_LABELS[key],p.x,p.y);
+    });
+}
+
+/* //api
 //This function fetches the current temperature for Bamberg (center) and displays it in the banner on the page.
 async function loadWeather() {
     const lat = 49.89;
@@ -276,7 +454,7 @@ async function loadRainMap() {
             console.error("Rain map error:", lol);
         }
     }
-}
+} */
 
 
 
