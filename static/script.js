@@ -95,7 +95,7 @@ const PARKS = [
     {
         id: 'hauptsmoor',
         name: 'Hauptsmoorwald',
-        distirct: 'East Bamberg - city forest',
+        district: 'East Bamberg - city forest',
         desc: "Bamberg's extensive city forest east of the centre. Tall pines and oaks create almost total canopy - cool even in high summer. Many walking and cycling trails, picnic spots, and a forester's lodge.",
         lat: 49.8920, lon: 10.9310,
         weather: {shade: 10, breeze: 3, rain_shelter: 6, warmth: 2, quiet: 9, open_space: 3}
@@ -464,6 +464,45 @@ function renderCard(park, score, grid) {
         }).join('');
         row.innerHTML = html || '<span style="font-size:0.72rem;color:#aaa">No POIs found nearby</span>';
     });
+}
+
+/* DETAIL PANEL */
+function openDetail(id) {
+    const park = PARKS.find(p => p.id === id);
+    if (!park) return;
+    openDetailId = id;
+    setActiveMarker(id);
+
+    document.getElementById('dp-name').textContent = park.name;
+    document.getElementById('dp-district').textContent = park.district;
+    document.getElementById('dp-desc').textContent = park.desc;
+    document.getElementById('dp-weather').innerHTML = Object.entries(park.weather).map(([key,val]) => `
+        <div class="detail-weather-item">
+            <div class="dwi-label">${weatherIcon(key)} ${WEATHER_LABELS[key]}</div>
+            <div class="dwi-bar"><div class="dwi-fill" style="width:${val*10}%"></div></div>
+            <div class="dwi-val">${val}/10</div>
+        </div>`).join('');
+
+    // Show leading state, then fill POIs
+    const poiEl = document.getElementById('dp-poi');
+    poiEl.innerHTML = '<p style="font-size:0.8rem;color:#aaa">Fetching nearby places from OpenStreetMap...</p>';
+
+    fetchPOIs(park).then(poi => {
+        poiEl.innerHTML = Object.entries(poi).map(([cat,items]) => {
+            if (!items.length) return '';
+            const color = POI_COLORS[cat];
+            return `<div class="detail-poi-category">
+                <div class="detail-poi-cat-name">${poiIcon(cat)} ${cat.charAt(0).toUpperCase()+cat.slice(1)}</div>
+                ${items.map(item => `
+                    <div class="detail-poi-item">
+                        <div class="detail-poi-dot" style="background:${color}"></div>
+                        ${item.name}
+                        <span class="detail-poi-dist">${item.dist}</span>
+                    </div>`).join('')}
+            </div>`;
+        }).join('') || '<p style="font-size:0.8rem;color:#aaa">No points of interest found within 400m.</p>';
+    });
+    document.getElementById('detail-panel').classList.add('visible');
 }
 
 /* //api
