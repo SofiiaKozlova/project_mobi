@@ -8,6 +8,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='feedback.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='date_planner.css') }}">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 </head>
 <body>
@@ -66,6 +68,7 @@
                 </div>
             </div>
             <div class="sidebar-section">
+                
                 <div class="sidebar-title">Compare parks</div>
                 <p class="compare-hint">Click ⊕ on any card to select for comparison</p>
                 <button class="btn-compare" id="btn-open-compare" disabled>Compare selected 
@@ -74,6 +77,34 @@
                     </span>
                 </button>
                 <button class="btn-reset" id="btn-reset">Reset all filters</button>
+            </div>
+            <!-- Date Planning -->
+            <div class="sidebar-section">
+                <div class="sidebar-title">Date Planning</div>
+
+                <div class="date-planner">
+
+                    <input
+                        type="text"
+                        id="person1-input"
+                        class="date-input"
+                        placeholder="Person 1 location">
+
+                    <input
+                        type="text"
+                        id="person2-input"
+                        class="date-input"
+                        placeholder="Person 2 location">
+
+                    <button
+                        id="btn-plan-date"
+                        class="date-btn">
+                        Find Meeting Parks
+                    </button>
+
+                    <div id="date-results"></div>
+
+                </div>
             </div>
          </aside>
          <!-- MAIN -->
@@ -116,6 +147,11 @@
                 <div class="detail-section-title">Nearby points of interest</div>
                 <div id="dp-poi"></div>
             </div>
+            <div class="detail-section feedback-section">
+                <a href="#" id="feedback-link" class="feedback-link">
+                    Leave feedback or comment
+                </a>
+            </div>
         </div>
      </div>
 
@@ -134,5 +170,6 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="{{ url_for('static', filename='script.js') }}"></script>
     <script src="{{ url_for('static', filename='buttons.js') }}"></script>
+    <script src="{{ url_for('static', filename='date_planner.js') }}"></script>
 </body>
 </html>

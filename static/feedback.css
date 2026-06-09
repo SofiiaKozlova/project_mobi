@@ -1,0 +1,14 @@
+.feedback-section {
+    margin-top: 16px;
+    text-align: center;
+}
+
+.feedback-link {
+    color: #2e7d32;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.feedback-link:hover {
+    text-decoration: underline;
+}

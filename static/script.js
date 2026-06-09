@@ -126,11 +126,109 @@ let openDetailId = null;
 let parkMarkers = {};
 
 /* MAP SETUP */
-const map = L.map('map').setView([49.8988, 10.8956], 14);
+
+// Restrict the map to the Bamberg area
+const mapBounds = L.latLngBounds(
+    [49.833, 10.825], // Southwest corner (below Babenberger Viertel)
+    [49.972, 11.100]  // Northeast corner (Kemmern area)
+);
+
+const map = L.map('map', {
+    center: [49.8988, 10.8956],
+    zoom: 14,
+    minZoom: 12,
+    maxZoom: 19,
+
+    // Prevent users from dragging outside the defined area
+    maxBounds: mapBounds,
+    maxBoundsViscosity: 1.0
+});
+
+// Fit the map to the defined boundaries
+map.fitBounds(mapBounds);
+
+/* SPECIAL BUTTON FOR LOCATING YOUR OWN POSITION */
+// Add a custom "my location" button to the map
+// Store the user's location marker
+let userLocationMarker = null;
+const locateControl = L.control({ position: 'topleft' });
+
+locateControl.onAdd = function () {
+    const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+    const button = L.DomUtil.create('a', '', container);
+
+    button.href = '#';
+    button.title = 'Show my location';
+    button.innerHTML = '📍';
+
+    button.style.width = '34px';
+    button.style.height = '34px';
+    button.style.lineHeight = '34px';
+    button.style.textAlign = 'center';
+    button.style.fontSize = '18px';
+    button.style.background = 'white';
+    button.style.cursor = 'pointer';
+
+    // Prevent map interactions when clicking the button
+    L.DomEvent.disableClickPropagation(container);
+
+    L.DomEvent.on(button, 'click', function (e) {
+        L.DomEvent.stop(e);
+
+        if (!navigator.geolocation) {
+            alert('Geolocation is not supported by your browser.');
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            function (position) {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+
+                // Remove the previous location marker
+                if (userLocationMarker) {
+                    map.removeLayer(userLocationMarker);
+                }
+
+                // Add a new location marker
+                userLocationMarker = L.marker([lat, lon])
+                    .addTo(map)
+                    .bindPopup('You are here');
+
+                // Stop any current animation
+                map.stop();
+
+                // Smoothly move and zoom to the user's location
+                map.flyTo([lat, lon], 18, {
+                    animate: true,
+                    duration: 1.5
+                });
+
+                // Open the popup after the map finishes moving
+                setTimeout(() => {
+                    userLocationMarker.openPopup();
+                }, 1500);
+            },
+            function (error) {
+                console.error(error);
+                alert('Could not get your location.');
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            }
+        );
+    });
+
+    return container;
+};
+
+locateControl.addTo(map);
 
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
-    attribution: '&copy; <a href="hhtps://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
 }).addTo(map);
 
 function makeParkIcon(active = false) {
@@ -199,13 +297,7 @@ function getBerlinHour() {
     return new Date().toLocaleString('sv-SE', {timeZone: 'Europe/Berlin'}).slice(0,13) + ':00:00';
 }
 
-const RAIN_POINTS = [
-    {name: 'Centre', lat: 49.890, lon: 10.890},
-    {name: 'North', lat: 49.910, lon: 10.890},
-    {name: 'South', lat: 49.870, lon: 10.890},
-    {name: 'West', lat: 49.890, lon: 10.860},
-    {name: 'East', lat: 49.890, lon: 10.920}
-];
+
 
 async function loadRainMap () {
     const hour = getBerlinHour();
@@ -469,7 +561,13 @@ function renderCard(park, score, grid) {
 /* DETAIL PANEL */
 function openDetail(id) {
     const park = PARKS.find(p => p.id === id);
+    
     if (!park) return;
+        const feedbackLink = document.getElementById("feedback-link");
+
+    if (feedbackLink) {
+        feedbackLink.href = `/feedback?park=${park.id}`;
+    }
     openDetailId = id;
     setActiveMarker(id);
 
@@ -546,96 +644,9 @@ function openCompare() {
     document.getElementById('compare-overlay').classList.add('visible');
 }
 
-/* //api
-//This function fetches the current temperature for Bamberg (center) and displays it in the banner on the page.
-async function loadWeather() {
-    const lat = 49.89;
-    const lon = 10.89;
-
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`;
-
-    try {
-        const res = await fetch(url);
-        const data = await res.json();
-
-        const temp = data.current_weather.temperature;
-
-
-        document.getElementById("score-banner-text").innerText =
-            `Current temperature in Bamberg: ${temp}°C`;
-
-        document.getElementById("score-banner").classList.add("visible");
-    } catch (errordydydydududu) {
-        console.error(errordydydydududu);
-    }
-}
-
-
-//coordinate of our city
-const bamberg = [49.89, 10.89];
-const map = L.map("map").setView(bamberg, 13);
-L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 19,
-    attribution: "&copy; OpenStreetMap"
-}).addTo(map);
-//locations
-const points = [
-    { name: "Center", lat: 49.89, lon: 10.89 },
-    { name: "North", lat: 49.905, lon: 10.89 },
-    { name: "South", lat: 49.875, lon: 10.89 },
-    { name: "West", lat: 49.89, lon: 10.865 },
-    { name: "East", lat: 49.89, lon: 10.915 }
-];
-//This function gets the current time in the Berlin timezone and formats it to match the time format used by the Open-Meteo API.
-//  It allows to find the correct hourly weather data for the current hour.
-function getBerlinCurrentHour() {
-    const berlinTime = new Date().toLocaleString("sv-SE", {
-        timeZone: "Europe/Berlin"
-    });
-    return berlinTime.slice(0, 13) + ":00:00";
-}
-//This function fetches rain data for multiple locations and displays them on the map as colored markers 
-// to show where it is raining and where it is not.
-async function loadRainMap() {
-    const currentHour = getBerlinCurrentHour();
-
-    for (const point of points) {
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=${point.lat}&longitude=${point.lon}&hourly=precipitation,precipitation_probability&timezone=Europe/Berlin`;
-
-        try {
-            const res = await fetch(url);
-            const data = await res.json();
-
-            const index = data.hourly.time.indexOf(currentHour);
-
-            const rain = index >= 0 ? data.hourly.precipitation[index] : 0;
-            const prob = index >= 0 ? data.hourly.precipitation_probability[index] : 0;
-
-            const isRain = rain > 0.1 || prob > 50;
-            const color = isRain ? "blue" : "green";
-
-            L.circleMarker([point.lat, point.lon], {
-                radius: 11,
-                color: color,
-                fillColor: color,
-                fillOpacity: 0.7,
-                weight: 3
-            })
-            .addTo(map)
-            .bindPopup(`<b>${point.name}</b><br>Rain: ${rain} mm<br>Chance: ${prob}%`);
-
-        } catch (lol) {
-            console.error("Rain map error:", lol);
-        }
-    }
-} */
-
-
-
 
 
 //functions
 initParkMarkers();
 loadWeather();
-loadRainMap();
 renderAll();

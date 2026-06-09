@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feedback | CoolPark Bamberg</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='feedback_page.css') }}">
+</head>
+<body>
+
+    <header class="feedback-header">
+        <div class="feedback-brand">
+            <span class="feedback-logo">🌿</span>
+            <span class="feedback-brand-text">CoolPark Bamberg</span>
+        </div>
+        <p class="feedback-subtitle">Share your opinion or suggest improvements.</p>
+    </header>
+
+    <main class="feedback-page">
+        <section class="feedback-card">
+            <h1 class="feedback-title">Leave Feedback</h1>
+            <p class="feedback-intro">
+                Tell us what you think about a park in Bamberg. Your feedback helps improve the recommendations and park information.
+            </p>
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="flash-message {{ category }}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
+
+            <form class="feedback-form" method="post" action="{{ url_for('submit_feedback') }}">
+                <input type="hidden" name="park" value="{{ park }}">
+
+                <div class="form-group">
+                    <label for="name">Your Name</label>
+                    <input type="text" id="name" name="name" placeholder="Enter your name">
+                    <div class="error-message" id="name-error"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="rating">Overall Rating</label>
+                    <select id="rating" name="rating">
+                        <option value="">Select a rating</option>
+                        <option value="5">⭐⭐⭐⭐⭐ Excellent</option>
+                        <option value="4">⭐⭐⭐⭐ Good</option>
+                        <option value="3">⭐⭐⭐ Average</option>
+                        <option value="2">⭐⭐ Poor</option>
+                        <option value="1">⭐ Very Poor</option>
+                    </select>
+                    <div class="error-message" id="rating-error"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="feedback">Your Feedback</label>
+                    <textarea
+                        id="feedback"
+                        name="feedback"
+                        placeholder="Write your comments about shade, weather comfort, atmosphere, or anything else..."
+                    ></textarea>
+                    <div class="error-message" id="feedback-error"></div>
+                </div>
+
+                <button type="submit" class="submit-btn">Submit Feedback</button>
+            </form>
+
+            <a href="/" class="back-link">← Back to parks</a>
+        </section>
+    </main>
+    <script src="{{ url_for('static', filename='feedback.js') }}"></script>
+</body>
+</html>
