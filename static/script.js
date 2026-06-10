@@ -30,7 +30,7 @@ const WEATHER_LABELS = {
 const POI_COLORS = {
     transit: '#4a86e8',
     food: '#e67e22',
-    shopping: '#9b59b6',
+    icecream: '#f4b183',
     sightseeing: '#27ae60',
     playground: '#e91e8c'
 };
@@ -120,7 +120,13 @@ const PARKS = [
 
 /* STATE */
 let activeWeather = new Set();
-let activePoi = new Set(['transit', 'food', 'shopping', 'sightseeing', 'playground']);
+let activePoi = new Set([
+    'transit',
+    'food',
+    'icecream',
+    'sightseeing',
+    'playground'
+]);
 let compareSet = new Set();
 let openDetailId = null;
 let parkMarkers = {};
@@ -339,7 +345,10 @@ function overpassUrl(lat, lon) {
     (
         node["highway"="bus_stop"](around:${r},${lat},${lon});
         node["amenity"~"restaurant|cafe|biergarten"](around:${r},${lat},${lon});
-        node["shop"](around:${r},${lat},${lon});
+
+        node["amenity"="ice_cream"](around:${r},${lat},${lon});
+        node["shop"="ice_cream"](around:${r},${lat},${lon});
+
         node["tourism"~"attraction|museum|viewpoint"](around:${r},${lat},${lon});
         node["historic"](around:${r},${lat},${lon});
         node["leisure"="playground"](around:${r},${lat},${lon});
@@ -361,11 +370,25 @@ function haversine(lat1, lon1, lat2, lon2) {
 
 function classifyNode(node) {
     const t = node.tags || {};
-    if (t.highway === 'bus_stop') return 'transit';
-    if (['restaurant','cafe','biergarten'].includes(t.amenity)) return 'food';
-    if (t.shop) return 'shopping';
-    if (t.leisure === 'playground') return 'playground';
-    if (t.tourism || t.historic) return 'sightseeing';
+
+    if (t.highway === 'bus_stop')
+        return 'transit';
+
+    if (['restaurant', 'cafe', 'biergarten'].includes(t.amenity))
+        return 'food';
+
+    if (t.amenity === 'ice_cream')
+        return 'icecream';
+
+    if (t.shop === 'ice_cream')
+        return 'icecream';
+
+    if (t.leisure === 'playground')
+        return 'playground';
+
+    if (t.tourism || t.historic)
+        return 'sightseeing';
+
     return null;
 }
 
@@ -379,7 +402,13 @@ const poiCache = {};
 
 async function fetchPOIs(park){
     if (poiCache[park.id]) return poiCache[park.id];
-    const poi = {transit: [], food: [], shopping: [], sightseeing: [], playground: []};
+    const poi = {
+    transit: [],
+    food: [],
+    icecream: [],
+    sightseeing: [],
+    playground: []
+};
     try {
         const res = await fetch(overpassUrl(park.lat, park.lon));
         const data = await res.json();
@@ -409,7 +438,7 @@ function weatherIcon(key) {
 }
 
 function poiIcon(cat) {
-    return { transit:'🚌', food:'🍽️', shopping:'🛍️', sightseeing:'🏛️', playground:'🛝' }[cat] || '•';
+    return { transit:'🚌', food:'🍽️', shopping:'🍦', sightseeing:'🏛️', playground:'🛝' }[cat] || '•';
 }
 
 /* RADAR CHART */
