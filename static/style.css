@@ -851,3 +851,50 @@ header {
     margin-bottom: 0.5rem;
     color: var(--text);
 }
+
+/* ─── DETAIL PANEL AS SIDEBAR — doesn't cover content ─── */
+.app.detail-open .main {
+    margin-right: 380px;
+    transition: margin-right 0.25s ease;
+}
+.main { transition: margin-right 0.25s ease; }
+
+/* ─── Google Maps nav links ─── */
+.detail-nav { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+.gmaps-link {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 7px 14px; background: var(--green-pale);
+    border: 1.5px solid var(--green-mid); border-radius: var(--radius-sm);
+    color: var(--green-dark); font-size: 0.78rem; font-weight: 500;
+    text-decoration: none; transition: background 0.15s;
+}
+.gmaps-link:hover { background: var(--green-light); color: white; }
+
+/* ─── Per-park rain ─── */
+.rain-line {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; border-radius: var(--radius-sm);
+    font-size: 0.85rem; line-height: 1.4;
+}
+.rain-line.wet { background: #e6f0fb; border-left: 4px solid #4a86e8; color: #1c3a5e; }
+.rain-line.dry { background: var(--green-pale); border-left: 4px solid var(--green-mid); color: var(--green-dark); }
+.rain-line .rain-icon { font-size: 1.4rem; }
+
+/* ─── Transit: bus lines + VGN link ─── */
+.transit-stop { align-items: flex-start !important; gap: 8px !important; padding-bottom: 12px !important; }
+.transit-lines { margin-top: 4px; font-size: 0.78rem; color: var(--text-muted); display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.transit-lines-none { color: #bbb; font-style: italic; }
+.bus-line { background: #4a86e8; color: white; font-weight: 600; font-size: 0.72rem; padding: 2px 7px; border-radius: 10px; }
+.vgn-link { display: inline-block; margin-top: 5px; font-size: 0.75rem; color: var(--green-mid); text-decoration: none; }
+.vgn-link:hover { text-decoration: underline; }
+
+/* ─── Icecream POI badge ─── */
+.poi-badge.icecream { background: #fef3e2; color: #7a4200; }
+
+/* ─── Compare temperature diff ─── */
+.compare-temp-diff {
+    grid-column: 1 / -1;
+    background: var(--sky-pale); border: 1px solid #a8d8ec;
+    border-radius: var(--radius-sm); padding: 10px 16px;
+    font-size: 0.85rem; color: #1a5f7a; margin-bottom: 1rem;
+}

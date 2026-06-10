@@ -26,14 +26,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const btn = e.target.closest('.poi-filter-btn');
         if (!btn) return;
         const p = btn.dataset.poi;
-        if (activePoi.has(p)) { 
-            activePoi.delete(p);
-            btn.classList.remove('active');
-        } else {
-            activePoi.add(p);
-            btn.classList.add('active');
-        }
-        // Instantly toggle badge visibility without full re-render
+        if (activePoi.has(p)) { activePoi.delete(p); btn.classList.remove('active'); }
+        else { activePoi.add(p); btn.classList.add('active'); }
         document.querySelectorAll('.poi-badge').forEach(badge => {
             const cat = [...badge.classList].find(c => POI_COLORS[c]);
             if (cat) badge.classList.toggle('hidden', !activePoi.has(cat));
@@ -57,6 +51,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Detail panel: close button
     document.getElementById('btn-detail-close').addEventListener('click', closeDetail);
+
+    // Detail panel: close on click outside
+    document.addEventListener('pointerdown', e => {
+        const panel = document.getElementById('detail-panel');
+        if (!panel.classList.contains('visible')) return;
+        if (e.target.closest('#detail-panel, .park-card, .leaflet-marker-icon, .leaflet-marker-pane, .leaflet-interactive, .leaflet-control, .locate-btn')) return;
+        closeDetail();
+    });
 
     // Reset all filters
     document.getElementById('btn-reset').addEventListener('click', () => {
