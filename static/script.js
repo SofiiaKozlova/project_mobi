@@ -440,7 +440,7 @@ async function fetchRain(lat,lon) {
    ============================================================ */
 const OSM_RADIUS = 400; //metres around park centre
 
-function overpassUrl(lat, lon) {
+/* function overpassUrl(lat, lon) {
     const r = OSM_RADIUS;
     const q = `
     [out:json][timeout:10];
@@ -457,6 +457,93 @@ function overpassUrl(lat, lon) {
     );
     out body;`;
     return `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(q)}`;
+} */
+
+/* ─── BATCH OVERPASS: ONE call for ALL parks ─── */
+function buildBatchOverpassQuery() {
+    const cats = [
+        '["highway"="bus_stop"]',
+        '["public_transport"="platform"]',
+        '["amenity"~"restaurant|cafe|biergarten"]',
+        '["amenity"="ice_cream"]',
+        '["shop"="ice_cream"]',
+        '["tourism"~"attraction|museum|viewpoint"]',
+        '["historic"]',
+        '["leisure"="playground"]'
+    ];
+    // UNION: separate statement per park per category (not chained = intersection!)
+    const stmts = [];
+    for (const c of cats) {
+        for (const p of PARKS) {
+            stmts.push(`node${c}(around:${OSM_RADIUS},${p.lat},${p.lon})`);
+        }
+    }
+    return `[out:json][timeout:30];(${stmts.join(';')};);out body;`;
+}
+
+let allPoisLoaded = false;
+let _poiFetchPromise = null; // singleton guard
+
+async function fetchAllPOIs() {
+    if (allPoisLoaded) return;
+    if (allPoisLoaded) return;
+    // If already fetching, return the same promise (prevents 13 concurrent calls)
+    if (_poiFetchPromise) return _poiFetchPromise;
+    _poiFetchPromise = _doFetchAllPOIs();
+    return _poiFetchPromise;
+}
+
+async function _doFetchAllPOIs() {
+    try {
+        console.time('Batch POI fetch');
+        const q = buildBatchOverpassQuery();
+        // Use POST for large queries (GET URL can exceed browser limits)
+        const resp = await fetch('https://overpass-api.de/api/interpreter', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: 'data=' + encodeURIComponent(q)
+        });
+        const data = await resp.json();
+        console.timeEnd('Batch POI fetch');
+
+        // Initialize empty POI lists for each park
+        PARKS.forEach(p => {
+            if (!poiCache[p.id]) poiCache[p.id] = {transit:[],food:[],icecream:[],sightseeing:[],playground:[]};
+        });
+
+        // Assign each node to the nearest park
+        (data.elements || []).forEach(node => {
+            const cat = classifyNode(node);
+            if (!cat) return;
+            let bestPark = null, bestDist = Infinity;
+            PARKS.forEach(p => {
+                const d = haversine(p.lat, p.lon, node.lat, node.lon);
+                if (d < bestDist && d <= OSM_RADIUS) { bestDist = d; bestPark = p; }
+            });
+            if (!bestPark) return;
+            const entry = {name:nodeName(node),dist:distLabel(Math.round(bestDist)),_dist:bestDist,lat:node.lat,lon:node.lon};
+            if (cat==='transit') { entry.lines=busLines(node); entry.rawName=(node.tags&&node.tags.name)||''; }
+            poiCache[bestPark.id][cat].push(entry);
+        });
+
+        // Sort + cap at 3 per category per park
+        PARKS.forEach(p => {
+            Object.keys(poiCache[p.id]).forEach(cat => {
+                poiCache[p.id][cat].sort((a,b) => a._dist - b._dist);
+                poiCache[p.id][cat] = poiCache[p.id][cat].slice(0,3).map(({_dist,...rest})=>rest);
+            });
+        });
+
+        allPoisLoaded = true;
+        console.log(`All POIs loaded in one batch: ${(data.elements||[]).length} nodes`);
+    } catch(e) {
+        console.warn('Batch POI fetch failed:', e);
+        // Initialize empty caches so cards don't hang
+        PARKS.forEach(p => {
+            if (!poiCache[p.id]) poiCache[p.id] = {transit:[],food:[],icecream:[],sightseeing:[],playground:[]};
+        });
+        allPoisLoaded = true; // Mark as done even on failure so nothing hangs
+    }
 }
 
 function distLabel(metres) {
@@ -535,26 +622,26 @@ function gmapsPoiUrl(name, lat, lon) {
 const poiCache = {};
 
 async function fetchPOIs(park){
-    if (poiCache[park.id]) return poiCache[park.id];
-    const poi = {
-    transit: [],
-    food: [],
-    icecream: [],
-    sightseeing: [],
-    playground: []
-};
+        // Wait for batch to complete if not done yet
+    if (!allPoisLoaded) await fetchAllPOIs();
+    return poiCache[park.id] || {transit:[],food:[],icecream:[],sightseeing:[],playground:[]};
+}
+
+/* legacy fetchPOIs kept as cache lookup only; batch does the work */
+/* const __unused = 0; if(false){
+    // old per-park code removed; keeping indent for diff clarity
+    const poi = {transit:[],food:[],icecream:[],sightseeing:[],playground:[]};
     try {
-        const data = await(await fetch(overpassUrl(park.lat,park.lon))).json();
+        // (was: individual overpass call per park)
+        const data = {elements:[]};
         data.elements.forEach(node=>{
             const cat=classifyNode(node);
             if(!cat) return;
-            const dist=Math.round(haversine(park.lat,park.lon,node.lat,node.lon));
+            const dist=Math.round(haversine(0,0,node.lat,node.lon));
             const entry = {name:nodeName(node),dist:distLabel(dist),_dist:dist,lat:node.lat,lon:node.lon};
             if(cat==='transit'){entry.lines=busLines(node);entry.rawName=(node.tags&&node.tags.name)||'';}
             poi[cat].push(entry);
         });
-
-        // sort by distance, keep top 3 per category
         Object.keys(poi).forEach(cat => {
             poi[cat].sort((a,b) => a._dist - b._dist);
             poi[cat] = poi[cat].slice(0,3).map(({_dist,...rest}) => rest);
@@ -565,7 +652,7 @@ async function fetchPOIs(park){
 
     poiCache[park.id] = poi;
     return poi;
-}
+} */
 
 /* HELPERS */
 function weatherIcon(key) {
@@ -744,6 +831,7 @@ function openDetail(id) {
     document.getElementById('dp-name').textContent = park.name;
     document.getElementById('dp-district').textContent = park.district;
     document.getElementById('dp-desc').textContent = park.desc;
+
     // Google Maps links (walking + transit)
     const navEl=document.getElementById('dp-nav');
     if(navEl){
@@ -790,7 +878,7 @@ function openDetail(id) {
                         :`<div class="transit-lines transit-lines-none">No line info on OpenStreetMap</div>`;
                     const gmapsHref = gmapsPoiUrl(item.rawName || item.name, item.lat, item.lon);
                     const vgnHref = item.rawName ? `https://www.vgn.de/fahrplan/abfahrtsmonitor/?stop=${encodeURIComponent(item.rawName)}` : 'https://www.vgn.de/abfahrten/';
-                    html+=`<div class="detail-poi-item transit-stop"><div class="detail-poi-dot" style="background:${color}"></div><div style="flex:1;min-width:0"><div><strong>${item.name}</strong> <span class="detail-poi-dist">${item.dist}</span></div>${linesHtml}<a class="vgn-link" href="${href}" target="_blank" rel="noopener">📅 Live departures on vgn.de →</a></div></div>`;
+                    html+=`<div class="detail-poi-item transit-stop"><div class="detail-poi-dot" style="background:${color}"></div><div style="flex:1;min-width:0"><div><a href="${gmapsHref}" target="_blank" rel="noopener" class="poi-link-inline"><strong>${item.name}</strong></a> <span class="detail-poi-dist">${item.dist}</span></div>${linesHtml}<div class="transit-actions"><a class="vgn-link" href="${gmapsHref}" target="_blank" rel="noopener">📍 Google Maps</a> <a class="vgn-link" href="${vgnHref}" target="_blank" rel="noopener">🌐 VGN departures</a></div></div></div>`;
                 });
                 html+=`</div>`;
             } else {
@@ -801,7 +889,7 @@ function openDetail(id) {
                         <span class="poi-name">${item.name}</span>
                         <span class="detail-poi-dist">${item.dist}</span>
                     </a>`;
-                }).join('')}<div>`;
+                }).join('')}</div>`;
             }
         }
         poiEl.innerHTML = html || '<p style="font-size:0.8rem;color:#aaa">No points of interest found within 400m.</p>';
@@ -838,11 +926,20 @@ function openCompare() {
     // Temperature difference section
     let tempDiffHtml='';
     if(parks.length===2){
-        const wDiff=parks[0].weather.warmth-parks[1].weather.warmth;
-        const warmer=wDiff>0?parks[0]:wDiff<0?parks[1]:null;
-        tempDiffHtml=warmer
-            ?`<div class="compare-temp-diff">🌡️ <strong>${warmer.name}</strong> is roughly ${Math.abs(wDiff)} point${Math.abs(wDiff)>1?'s':''} warmer (sun exposure)</div>`
-            :`<div class="compare-temp-diff">🌡️ Both parks have similar warmth</div>`;
+        const t0 = parkTempCache[parks[0].id], t1 = parkTempCache[parks[1].id];
+        if (t0 != null && t1 != null) {
+            const diff = Math.abs(t0 - t1).toFixed(1);
+            const warmer = t0 > t1 ? parks[0] : t1 > t0 ? parks[1] : null;
+            tempDiffHtml=warmer
+                ?`<div class="compare-temp-diff">🌡️ <strong>${warmer.name}</strong> is roughly ${Math.abs(wDiff)} point${Math.abs(wDiff)>1?'s':''} warmer (sun exposure)</div>`
+                :`<div class="compare-temp-diff">🌡️ Both parks have similar warmth</div>`;
+        } else {
+            const wDiff=parks[0].weather.warmth-parks[1].weather.warmth;
+            const warmer=wDiff>0?parks[0]:wDiff<0?parks[1]:null;
+            tempDiffHtml=warmer
+                ?`<div class="compare-temp-diff">🌡️ <strong>${warmer.name}</strong> has ${Math.abs(wDiff)} more sun exposure points</div>`
+                :`<div class="compare-temp-diff">🌡️ Both parks have similar warmth</div>`;
+        }
     }
     document.getElementById('compare-grid').innerHTML = parks.map(park => `
         <div class="compare-park-col">
@@ -857,6 +954,16 @@ function openCompare() {
                         <span class="compare-stat-val">${val}</span>
                     </div>
                 </div>`).join('')}
+            <div class="compare-poi-section">
+                ${(()=>{
+                    const poi = poiCache[park.id];
+                    if(!poi) return '<span class="reminder-empty">POIs loading…</span>';
+                    return Object.entries(poi).filter(([cat,items])=>activePoi.has(cat)&&items.length).map(([cat,items])=>
+                        `<span class="poi-badge ${cat}">${poiIcon(cat)} ${items.length} ${capitalize(cat)}</span>`
+                    ).join(' ') || '<span class="reminder-empty">No nearby POIs</span>';
+                })()}
+            </div>
+            ${parkTempCache[park.id] != null ? `<div class="compare-temp-line">🌡️ ${parkTempCache[park.id].toFixed(1)}°C right now</div>` : ''}
         </div>`).join('');
     document.getElementById('compare-overlay').classList.add('visible');
 }
@@ -879,29 +986,72 @@ async function computeQuietness() {
     } catch(e){console.warn('Quietness computation failed — keeping manual scores:',e);}
 }
 
-/* ─── PER-PARK TEMPERATURE (Open-Meteo, no key) ─── */
+/* ─── PER-PARK TEMPERATURE ─── */
 const parkTempCache = {};
-async function fetchParkTemp(park) {
-    if (parkTempCache[park.id] !== undefined) return parkTempCache[park.id];
+let bambergAvgTemp = null;
+
+/* Single Open-Meteo call for ALL parks (comma-separated coords).
+   Falls back to per-park calls if the multi endpoint fails. */
+async function loadAllParkTemps() {
     try {
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=${park.lat}&longitude=${park.lon}&current_weather=true&timezone=Europe/Berlin`;
-        const data = await (await fetch(url)).json();
-        const t = data.current_weather?.temperature ?? null;
-        parkTempCache[park.id] = t;
-        return t;
-    } catch (e) {
-        console.warn(`Temp fetch failed for ${park.name}:`, e);
-        parkTempCache[park.id] = null;
-        return null;
+        // First try Netatmo via our backend (if keys are configured)
+        try {
+            const resp = await fetch(`/api/microclimate?lat=49.89&lon=10.89&radius=8000`);
+            if (resp.ok) {
+                const {stations} = await resp.json();
+                if (stations && stations.length) {
+                    console.log(`Netatmo: ${stations.length} stations found`);
+                    // Assign each park the temp from the nearest Netatmo station
+                    PARKS.forEach(p => {
+                        let best = null, bestD = Infinity;
+                        stations.forEach(s => {
+                            const d = haversine(p.lat, p.lon, s.lat, s.lon);
+                            if (d < bestD) { bestD = d; best = s; }
+                        });
+                        if (best) parkTempCache[p.id] = best.temperature;
+                    });
+                }
+            }
+        } catch(e) { /* Netatmo not available, continue with Open-Meteo */ }
+
+        // Fill in any parks without a Netatmo reading via Open-Meteo
+        const missing = PARKS.filter(p => parkTempCache[p.id] === undefined);
+        if (missing.length) {
+            const lats = missing.map(p => p.lat).join(',');
+            const lons = missing.map(p => p.lon).join(',');
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&current_weather=true&timezone=Europe/Berlin`;
+            const data = await (await fetch(url)).json();
+            // Open-Meteo returns an array when given multiple coords
+            const results = Array.isArray(data) ? data : [data];
+            results.forEach((d, i) => {
+                if (i < missing.length) {
+                    parkTempCache[missing[i].id] = d.current_weather?.temperature ?? null;
+                }
+            });
+        }
+    } catch(e) {
+        console.warn('Batch temp fetch failed, trying individual:', e);
+        await Promise.all(PARKS.map(async p => {
+            if (parkTempCache[p.id] !== undefined) return;
+            try {
+                const d = await (await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${p.lat}&longitude=${p.lon}&current_weather=true`)).json();
+                parkTempCache[p.id] = d.current_weather?.temperature ?? null;
+            } catch(e2) { parkTempCache[p.id] = null; }
+        }));
     }
+
+    const valid = PARKS.map(p => parkTempCache[p.id]).filter(t => t != null);
+    if (valid.length) bambergAvgTemp = valid.reduce((a,b) => a+b, 0) / valid.length;
+    console.log(`Temps loaded: avg ${bambergAvgTemp?.toFixed(1)}°C from ${valid.length} parks`);
+    refreshReminders();
 }
 
-let bambergAvgTemp = null;
-async function loadAllParkTemps() {
-    const temps = await Promise.all(PARKS.map(p => fetchParkTemp(p)));
-    const valid = temps.filter(t => t !== null);
-    if (valid.length) bambergAvgTemp = valid.reduce((a,b) => a+b, 0) / valid.length;
-    refreshReminders();
+/* Single-park temp lookup (for detail panel, uses cache) */
+async function fetchParkTemp(park) {
+    if (parkTempCache[park.id] !== undefined) return parkTempCache[park.id];
+    // If not in cache yet, wait a bit for batch to finish
+    await new Promise(r => setTimeout(r, 2000));
+    return parkTempCache[park.id] ?? null;
 }
 
 /* ─── PARK RECOMMENDATION REMINDER (above map) ─── */
@@ -955,6 +1105,11 @@ function refreshComfortableReminder() {
 //functions
 initParkMarkers();
 loadWeather();
+// Fetch ALL POIs in one batch call, THEN render cards (so badges show immediately)
+fetchAllPOIs().then(() => {
+    renderAll();
+    computeQuietness();
+    loadAllParkTemps();
+});
+// Show cards immediately with loading placeholders
 renderAll();
-computeQuietness();
-loadAllParkTemps();

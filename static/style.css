@@ -738,6 +738,7 @@ header {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
+    margin-bottom: 0.5rem;
 }
 
 .detail-weather-item {
@@ -745,6 +746,7 @@ header {
     border-radius: var(--radius-sm);
     padding: 10px;
     font-size: 0.8rem;
+    border: 1px solid var(--sand);
 }
 
 .detail-weather-item .dwi-label{
@@ -769,6 +771,7 @@ header {
 
 .detail-weather-item .dwi-val{
     font-weight: 600;
+    font-size: 0.9rem;
     color: var(--green-dark);
 }
 
@@ -1120,4 +1123,82 @@ header {
     flex-wrap: wrap;
     gap: 6px 12px;
     margin-top: 5px;
+}
+
+/* ─── MOBILE RESPONSIVE ─── */
+@media (max-width: 768px) {
+    header { padding: 0 1rem; height: 56px; }
+    .logo { font-size: 1.1rem; }
+    .header-sub { display: none; }
+    
+    .app { flex-direction: column; }
+    .sidebar {
+        position: static;
+        width: 100%;
+        height: auto;
+        max-height: none;
+        border-right: none;
+        border-bottom: 1px solid var(--sand);
+        padding: 1rem;
+    }
+    .main { padding: 1rem; }
+    .main.detail-open { margin-right: 0 !important; }
+    
+    .filter-grid { grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+    .filter-btn { padding: 6px 8px; font-size: 0.72rem; }
+    .filter-btn .filter-icon { font-size: 1rem; }
+    
+    .poi-filter-list { flex-direction: row; flex-wrap: wrap; gap: 6px; }
+    .poi-filter-btn { padding: 6px 10px; font-size: 0.75rem; flex: 0 0 auto; }
+    
+    .parks-grid { grid-template-columns: 1fr; gap: 1rem; }
+    
+    #map { height: 280px; border-radius: var(--radius-sm); }
+    
+    /* Detail panel: full-screen on mobile */
+    #detail-panel {
+        width: 100% !important;
+        top: 0 !important;
+        height: 100vh !important;
+        z-index: 150 !important;
+    }
+    
+    /* Compare modal: full width */
+    .compare-modal { max-width: 100%; margin: 0.5rem; padding: 1rem; }
+    .compare-grid { grid-template-columns: 1fr !important; gap: 1rem; }
+    .compare-park-col { border-bottom: 1px solid var(--sand); padding-bottom: 1rem; }
+    
+    /* Park recommend banner */
+    .park-recommend-banner { padding: 10px 14px; }
+    .park-recommend-header { flex-direction: column; align-items: flex-start; }
+    .park-recommend-controls { font-size: 0.75rem; }
+    
+    /* Sidebar sections collapse a bit */
+    .sidebar-section { margin-bottom: 1.2rem; }
+    .date-planner { display: flex; flex-direction: column; gap: 6px; }
+    
+    /* Touch-friendly buttons */
+    .btn-compare, .btn-reset, .date-btn { min-height: 44px; font-size: 0.9rem; }
+    .gmaps-link { min-height: 40px; font-size: 0.82rem; }
+}
+
+@media (max-width: 480px) {
+    .filter-grid { grid-template-columns: 1fr 1fr; }
+    .parks-grid { grid-template-columns: 1fr; }
+    #map { height: 220px; }
+    .park-header { flex-direction: column; gap: 6px; }
+    .park-score-badge { margin-left: 0; align-self: flex-start; }
+    .detail-nav { flex-direction: column; }
+    .gmaps-link { width: 100%; justify-content: center; }
+}
+
+.compare-poi-section {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    padding: 10px 0; margin-top: 8px;
+    border-top: 1px solid var(--sand);
+}
+.compare-temp-line {
+    font-size: 0.85rem; color: var(--text-muted);
+    padding: 6px 0; margin-top: 4px;
+    border-top: 1px solid var(--sand);
 }

@@ -10,31 +10,6 @@ Provides two API proxy endpoints so client-side JS never touches secrets:
   /api/shade?lat=49.89&lon=10.89
       → Returns NDVI-based tree-cover estimate from Copernicus Sentinel-2
         for a ~200 m area around a park centre.
-
-SETUP
-─────
-1. pip install flask requests python-dotenv
-
-2. Create a file called  .env  next to your app.py with these four lines
-   (paste YOUR real values — they are never committed to Git):
-
-       NETATMO_CLIENT_ID=your_client_id_here
-       NETATMO_CLIENT_SECRET=your_secret_here
-       COPERNICUS_CLIENT_ID=your_client_id_here
-       COPERNICUS_CLIENT_SECRET=your_secret_here
-
-3. Add  .env  to  .gitignore  so you don't accidentally push it.
-
-4. In your app.py, register the blueprint:
-
-       from dotenv import load_dotenv
-       load_dotenv()  # reads .env into os.environ
-
-       from api_routes import api_bp
-       app.register_blueprint(api_bp)
-
-Then your frontend JS can call  /api/microclimate  and  /api/shade  freely
-without any keys in the browser.
 """
 
 import os
