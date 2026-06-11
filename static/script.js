@@ -52,7 +52,7 @@ const PARKS = [
         name: 'Hain',
         district: 'Inselstadt - south, along the Regnitz',
         desc: "Bamberg's beloved 48-hectare riverside park in the south of the Inselstadt. Ancient plane trees provide dense canopy, making it ideal on hot summer days. Contains a botanical garden, a pond, and the Leinritt towpath along the Regnitz.",
-        lat: 49.8767, lon: 10.9029,
+        lat: 49.8810027, lon: 10.8947922,
         weather: {shade: 9, breeze: 6, rain_shelter: 3, warmth: 4, quiet: 7, open_space: 6}
     },
     {
@@ -60,7 +60,7 @@ const PARKS = [
         name: 'ERBA-Park',
         district: 'Gaustadt - north, former Landesgartenschau 2012',
         desc: " A 13.5-hectare park on the northern tip of the Regnitz Island, built on the former ERBA cotton-mill site for the 2012 Bavarian State Garden Show. Five playgrounds, open lawns, a sculpture park, and breezy waterfront on both Regnitz arms.",
-        lat: 49.9013, lon: 10.8794,
+        lat: 49.9031637, lon: 10.8696083,
         weather: {shade: 4, breeze: 9, rain_shelter: 2, warmth: 6, quiet: 5, open_space: 10}
     },
     {
@@ -68,7 +68,7 @@ const PARKS = [
         name: 'Rosengarten',
         district: 'Bergstadt - Neue Residenz courtyard',
         desc: "A baroque rose garden in the inner courtyard of the Neue Residenz, redesigned in 1733 by Balthasar Neumann. Around 4,500 roses in 48 varieties, framed by linden trees and box hedges. Stunning views over the Altstadt and Kloster Michelsberg.",
-        lat: 49.8915, lon: 10.8830,
+        lat: 49.8920232, lon: 10.8792782,
         weather: {shade: 5, breeze: 7, rain_shelter: 2, warmth: 8, quiet: 8, open_space: 4}
     },
     {
@@ -76,7 +76,7 @@ const PARKS = [
         name: 'Michelsberg gardens',
         district: 'Bergstadt - St. Michael monastery hill',
         desc: "The terraced gardens of the former Benedictine monastery of St. Michael offer sweeping views across the city's red rooftops and the cathedral. The walled garden is quiet and partly shaded, with a herb garden and old monastery orchards.",
-        lat: 49.8932, lon: 10.8775,
+        lat: 49.8939329, lon: 10.8781232,
         weather: {shade: 6, breeze: 7, rain_shelter: 4, warmth: 6, quiet: 9, open_space: 5}
     },
     {
@@ -84,7 +84,7 @@ const PARKS = [
         name: 'Volkspark (Nordpark)',
         district: 'Gaustadt - northwest',
         desc: "Bamberg's newest large green space, developed north of the ERBA-Park. Extensive sports and play facilities, open meadows, and good cycling connections along the Regnitz. Popular with families and sports clubs.",
-        lat: 49.9082, lon: 10.8791,
+        lat: 49.9000572, lon: 10.9271075,
         weather: {shade: 3, breeze: 8, rain_shelter: 2, warmth: 7, quiet: 5, open_space: 9}
     },
     {
@@ -92,7 +92,7 @@ const PARKS = [
         name: 'Domplatz & cathedral gardens',
         district: 'Bergstadt - cathedral hill',
         desc: "The open square and green terraces around Bamberg's UNESCO-listed cathedral. Well-maintained paths wind past hedges with views over the Regnitz valley. Partially sheltered from wind by the old episcopal buildings.",
-        lat: 49.8908, lon: 10.8825,
+        lat: 49.8909071, lon: 10.8825875,
         weather: {shade: 2, breeze: 9, rain_shelter: 1, warmth: 8, quiet: 7, open_space: 9}
     },
     {
@@ -100,7 +100,7 @@ const PARKS = [
         name: 'Leinritt meadows',
         district: 'Along the Regnitz - north park towpath',
         desc: "The historic Leinritt towpath runs along the Regnitz north of the Hain. Flat, open meadows loved by cyclists, joggers and kite-flyers. Virtually no shade, but a constant river breeze and clear views of Klein-Venedig.",
-        lat: 49.8850, lon: 10.8930,
+        lat: 49.893038, lon: 10.8831939,
         weather: {shade: 2, breeze: 9, rain_shelter: 1, warmth: 8, quiet: 7, open_space: 9}
     },
     {
@@ -108,7 +108,7 @@ const PARKS = [
         name: 'Hauptsmoorwald',
         district: 'East Bamberg - city forest',
         desc: "Bamberg's extensive city forest east of the centre. Tall pines and oaks create almost total canopy - cool even in high summer. Many walking and cycling trails, picnic spots, and a forester's lodge.",
-        lat: 49.8870, lon: 10.9460,
+        lat: 49.8874811, lon: 10.9361961,
         weather: {shade: 10, breeze: 3, rain_shelter: 6, warmth: 2, quiet: 9, open_space: 3}
     },
     {
@@ -124,7 +124,7 @@ const PARKS = [
         name: 'Schlosspark Seehof',
         district: 'Memmelsdorf - 4 km north of Bamberg',
         desc: "A 21.9-hectare baroque palace park, once one of Germany's most famous rococo gardens. The Bavarian State owns it and has restored the cascades and parterres. Open April-October. Classical concerts held here in summer.",
-        lat: 49.9316, lon: 10.9522,
+        lat: 49.9271324, lon: 10.9450048,
         weather: {shade: 6, breeze: 5, rain_shelter: 3, warmth: 7, quiet: 9, open_space: 7}
     },
     {
@@ -132,7 +132,7 @@ const PARKS = [
         name: 'Altenburg castle park',
         district: 'West Bamberg – Altenburg hill, 386 m',
         desc: "The wooded grounds around Bamberg's medieval Altenburg fortress, perched on the highest of the city's seven hills. Shaded forest paths wind up to breathtaking panoramic views over the Regnitz valley and the Steigerwald.",
-        lat: 49.8836, lon: 10.8625,
+        lat: 49.8806777, lon: 10.8645102,
         weather: {shade:8, breeze:9, rain_shelter:5, warmth:4, quiet:10, open_space:4}
     },
     {
@@ -140,7 +140,7 @@ const PARKS = [
         name: 'Stephansberg vineyard terraces',
         district: 'Bergstadt – terraced southeast hillside',
         desc: "South-facing vineyard terraces on the Stephansberg slope above the old town. Quiet stepped paths between historic wine cellars and the Stephanskirche, with sun-drenched benches and far-reaching views toward the Hauptsmoorwald.",
-        lat: 49.8895, lon: 10.8990,
+        lat: 49.8820044, lon: 10.8866592,
         weather: {shade:3, breeze:6, rain_shelter:2, warmth:9, quiet:8, open_space:5}
     },
     {
@@ -148,7 +148,7 @@ const PARKS = [
         name: 'Am Kranen promenade',
         district: 'Inselstadt – riverfront promenade',
         desc: "The lively riverside promenade along the Regnitz between the Kettenbrücke and the Markusbrücke. Lined with willows and benches, it offers views across to the old fishermen's houses of Klein-Venedig. Popular with students and evening strollers.",
-        lat: 49.8923, lon: 10.8865,
+        lat: 49.8925659, lon: 10.8852974,
         weather: {shade:4, breeze:8, rain_shelter:1, warmth:7, quiet:5, open_space:7}
     }
 ];
@@ -516,8 +516,19 @@ function busLines(node) {
     const ref = (node.tags||{}).route_ref||'';
     return ref?ref.split(/[;,]/).map(s=>s.trim()).filter(Boolean):[];
 }
+
 function vgnLiveUrl(name) {
-    return `https://www.vgn.de/verbindungen/?vgn3_dm_input=${encodeURIComponent(name+', Bamberg')}`;
+    // Use Google Maps which shows live departures for transit stops in Germany.
+    // The VGN deep-link landed on the connection-search page, not the stop's departure board.
+    // Google Maps reliably opens the stop card with live departures listed.
+    const q = name ? `${name} Bamberg` : 'Bamberg bus stop';
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+}
+
+/* Google maps URL for any place (POI), centered on its coords with name for context. */
+function gmapsPoiUrl(name, lat, lon) {
+    const q = name && !name.includes('(unnamed)') ? `${name}, Bamberg` : `${lat},${lon}`;
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
 }
 
 // Cache so we don't re-fetch when detail panel re-opens
@@ -562,7 +573,7 @@ function weatherIcon(key) {
 }
 
 function poiIcon(cat) {
-    return { transit:'🚌', food:'🍽️', shopping:'🍦', sightseeing:'🏛️', playground:'🛝' }[cat] || '•';
+    return { transit:'🚌', food:'🍽️', icecream:'🍦', sightseeing:'🏛️', playground:'🛝' }[cat] || '•';
 }
 
 /* RADAR CHART */
@@ -747,13 +758,16 @@ function openDetail(id) {
             <div class="dwi-val">${val}/10</div>
         </div>`).join('');
 
-    // Per-park rain
+    // Per-park live conditions: temperature + rain
     const rainEl=document.getElementById('dp-rain');
     if(rainEl){
-        rainEl.innerHTML='<span style="color:#aaa">Loading rain forecast…</span>';
-        fetchRain(park.lat,park.lon).then(({rain,prob})=>{
+        rainEl.innerHTML='<span style="color:#aaa">Loading live conditions…</span>';
+        Promise.all([fetchRain(park.lat,park.lon), fetchParkTemp(park)]).then(([{rain,prob}, temp])=>{
             const wet=rain>0.1||prob>50;
-            rainEl.innerHTML=`<div class="rain-line ${wet?'wet':'dry'}"><span class="rain-icon">${wet?'🌧️':'☀️'}</span><span><strong>${rain.toFixed(1)} mm</strong> now · <strong>${prob}%</strong> chance this hour — ${wet?'Bring an umbrella':'Looks dry'}</span></div>`;
+            const tempLine = temp !== null
+                ? `<div class="temp-line"><span class="rain-icon">🌡️</span><span><strong>${temp.toFixed(1)}°C</strong> at this park right now${bambergAvgTemp !== null ? ` <span class="temp-vs">(${(temp-bambergAvgTemp >= 0 ? '+' : '')}${(temp-bambergAvgTemp).toFixed(1)}° vs city avg)</span>` : ''}</span></div>`
+                : '';
+            rainEl.innerHTML = tempLine + `<div class="rain-line ${wet?'wet':'dry'}"><span class="rain-icon">${wet?'🌧️':'☀️'}</span><span><strong>${rain.toFixed(1)} mm</strong> now · <strong>${prob}%</strong> chance this hour — ${wet?'Bring an umbrella':'Looks dry'}</span></div>`;
         });
     }
 
@@ -774,12 +788,20 @@ function openDetail(id) {
                     const linesHtml=item.lines&&item.lines.length
                         ?`<div class="transit-lines">Lines: ${item.lines.map(l=>`<span class="bus-line">${l}</span>`).join(' ')}</div>`
                         :`<div class="transit-lines transit-lines-none">No line info on OpenStreetMap</div>`;
-                    const href=item.rawName?vgnLiveUrl(item.rawName):'https://www.vgn.de/verbindungen/';
+                    const gmapsHref = gmapsPoiUrl(item.rawName || item.name, item.lat, item.lon);
+                    const vgnHref = item.rawName ? `https://www.vgn.de/fahrplan/abfahrtsmonitor/?stop=${encodeURIComponent(item.rawName)}` : 'https://www.vgn.de/abfahrten/';
                     html+=`<div class="detail-poi-item transit-stop"><div class="detail-poi-dot" style="background:${color}"></div><div style="flex:1;min-width:0"><div><strong>${item.name}</strong> <span class="detail-poi-dist">${item.dist}</span></div>${linesHtml}<a class="vgn-link" href="${href}" target="_blank" rel="noopener">📅 Live departures on vgn.de →</a></div></div>`;
                 });
                 html+=`</div>`;
             } else {
-                html+=`<div class="detail-poi-category"><div class="detail-poi-cat-name">${poiIcon(cat)} ${capitalize(cat)}</div>${items.map(item=>`<div class="detail-poi-item"><div class="detail-poi-dot" style="background:${color}"></div>${item.name}<span class="detail-poi-dist">${item.dist}</span></div>`).join('')}</div>`;
+                html+=`<div class="detail-poi-category"><div class="detail-poi-cat-name">${poiIcon(cat)} ${capitalize(cat)}</div>${items.map(item=>{
+                    const url = gmapsPoiUrl(item.name, item.lat, item.lon);
+                    return `<a class="detail-poi-item poi-link" href="${url}" target="_blank" rel="noopener" title="Open in Google Maps">
+                        <div class="detail-poi-dot" style="background:${color}"></div>
+                        <span class="poi-name">${item.name}</span>
+                        <span class="detail-poi-dist">${item.dist}</span>
+                    </a>`;
+                }).join('')}<div>`;
             }
         }
         poiEl.innerHTML = html || '<p style="font-size:0.8rem;color:#aaa">No points of interest found within 400m.</p>';
@@ -857,8 +879,82 @@ async function computeQuietness() {
     } catch(e){console.warn('Quietness computation failed — keeping manual scores:',e);}
 }
 
+/* ─── PER-PARK TEMPERATURE (Open-Meteo, no key) ─── */
+const parkTempCache = {};
+async function fetchParkTemp(park) {
+    if (parkTempCache[park.id] !== undefined) return parkTempCache[park.id];
+    try {
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${park.lat}&longitude=${park.lon}&current_weather=true&timezone=Europe/Berlin`;
+        const data = await (await fetch(url)).json();
+        const t = data.current_weather?.temperature ?? null;
+        parkTempCache[park.id] = t;
+        return t;
+    } catch (e) {
+        console.warn(`Temp fetch failed for ${park.name}:`, e);
+        parkTempCache[park.id] = null;
+        return null;
+    }
+}
+
+let bambergAvgTemp = null;
+async function loadAllParkTemps() {
+    const temps = await Promise.all(PARKS.map(p => fetchParkTemp(p)));
+    const valid = temps.filter(t => t !== null);
+    if (valid.length) bambergAvgTemp = valid.reduce((a,b) => a+b, 0) / valid.length;
+    refreshReminders();
+}
+
+/* ─── PARK RECOMMENDATION REMINDER (above map) ─── */
+function refreshReminders() {
+    refreshRecommendationReminder();
+    refreshComfortableReminder();
+}
+
+function refreshRecommendationReminder() {
+    const el = document.getElementById('park-recommend-list');
+    const input = document.getElementById('park-recommend-threshold');
+    if (!el || !input || bambergAvgTemp === null) return;
+    const threshold = parseFloat(input.value) || 2;
+    const cooler = PARKS
+        .map(p => ({park: p, temp: parkTempCache[p.id], diff: bambergAvgTemp - parkTempCache[p.id]}))
+        .filter(x => x.temp !== null && x.diff >= threshold)
+        .sort((a,b) => b.diff - a.diff);
+    if (!cooler.length) {
+        el.innerHTML = `<span class="reminder-empty">No parks are at least ${threshold}°C cooler than the Bamberg average (${bambergAvgTemp.toFixed(1)}°C) right now.</span>`;
+        return;
+    }
+    el.innerHTML = cooler.map(x =>
+        `<div class="reminder-item">❄️ <strong>${x.park.name}</strong> is <strong>${x.diff.toFixed(1)}°</strong> colder than the Bamberg average (${x.temp.toFixed(1)}°C vs ${bambergAvgTemp.toFixed(1)}°C)</div>`
+    ).join('');
+}
+
+/* ─── COMFORTABLE PARK REMINDER (sidebar) ─── */
+function refreshComfortableReminder() {
+    const el = document.getElementById('comfortable-park-list');
+    const input = document.getElementById('comfortable-park-temp');
+    if (!el || !input) return;
+    if (bambergAvgTemp === null) {
+        el.innerHTML = `<span class="reminder-empty">Loading temperatures…</span>`;
+        return;
+    }
+    const ideal = parseFloat(input.value);
+    if (isNaN(ideal)) { el.innerHTML = ''; return; }
+    const cool = PARKS
+        .map(p => ({park: p, temp: parkTempCache[p.id]}))
+        .filter(x => x.temp !== null && x.temp <= ideal)
+        .sort((a,b) => a.temp - b.temp);
+    if (!cool.length) {
+        el.innerHTML = `<span class="reminder-empty">No parks are currently at or below ${ideal}°C.</span>`;
+        return;
+    }
+    el.innerHTML = cool.map(x =>
+        `<div class="reminder-item small">✓ <strong>${x.park.name}</strong> – ${x.temp.toFixed(1)}°C</div>`
+    ).join('');
+}
+
 //functions
 initParkMarkers();
 loadWeather();
 renderAll();
 computeQuietness();
+loadAllParkTemps();

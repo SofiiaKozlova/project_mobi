@@ -60,6 +60,14 @@ document.addEventListener('DOMContentLoaded', () => {
         closeDetail();
     });
 
+    // Park Recommendation Reminder input
+    const recInput = document.getElementById('park-recommend-threshold');
+    if (recInput) recInput.addEventListener('input', () => refreshRecommendationReminder());
+
+    // Comfortable Park Reminder input
+    const cmfInput = document.getElementById('comfortable-park-temp');
+    if (cmfInput) cmfInput.addEventListener('input', () => refreshRecommendationReminder());
+
     // Reset all filters
     document.getElementById('btn-reset').addEventListener('click', () => {
         activeWeather.clear();

@@ -67,6 +67,16 @@
                     </button>
                 </div>
             </div>
+            <!-- Comfortable Park Reminder -->
+            <div class="sidebar-section">
+                <div class="sidebar-title">Comfortable park reminder</div>
+                <p class="compare-hint">Enter your ideal temperature. Parks at or below it will be listed.</p>
+                <div class="reminder-input-row">
+                    <input type="number" id="comfortable-park-temp" class="date-input" placeholder="e.g. 22" step="0.5">
+                    <span class="reminder-unit">°C</span>
+                </div>
+                <div id="comfortable-park-list" class="reminder-list"></div>
+            </div>
             <div class="sidebar-section">
                 
                 <div class="sidebar-title">Compare parks</div>
@@ -117,6 +127,18 @@
                 <span>🎯</span>
                 <span id="filter-banner-text">Showing parks ranked by your selected conditions</span>
             </div>
+            <!-- Park Recommendation Reminder -->
+            <div class="park-recommend-banner">
+                <div class="park-recommend-header">
+                    <span class="park-recommend-title">🎯 Park recommendation reminder</span>
+                    <label class="park-recommend-controls">
+                        Notify me if a park is at least
+                        <input type="number" id="park-recommend-threshold" value="2" step="0.5" min="0">
+                        °C cooler than the Bamberg average.
+                    </label>
+                </div>
+                <div id="park-recommend-list" class="reminder-list"></div>
+            </div>
             <div id="map"></div>
             <div class="parks-grid" id="parks-grid"></div>
             <div class="empty-state" id="empty-state">
@@ -138,10 +160,15 @@
             <div class="detail-section">
                 <div class="detail-section-title">About this park</div>
                 <p class="detail-desc" id="dp-desc"></p>
+                <div class="=detail-nav" id="dp-nav"></div>
             </div>
             <div class="detail-section">
                 <div class="detail-section-title">Weather suitability</div>
                 <div class="detail-weather-grid" id="dp-weather"></div>
+            </div>
+            <div class="detail-section">
+                <div class="detail-section-title">Live conditions</div>
+                <div id="dp-rain"></div>
             </div>
             <div class="detail-section">
                 <div class="detail-section-title">Nearby points of interest</div>
