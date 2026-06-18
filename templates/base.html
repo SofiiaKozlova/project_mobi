@@ -26,7 +26,12 @@
 
         <div class="header-right">
             <span class="header-weather" id="header-weather" title="Live temperature in Bamberg">🌤️ —</span>
-            <a href="{{ url_for('profile') }}" class="avatar {{ 'active' if active == 'profile' }}" title="Your profile">S</a>
+            {% if current_user %}
+                <a href="{{ url_for('auth.profile') }}" class="avatar {{ 'active' if active == 'profile' }}" title="{{ current_user['email'] }}">{{ current_user['email'][0]|upper }}</a>
+                <a href="{{ url_for('auth.logout') }}" class="nav-logout" title="Log out">Log out</a>
+            {% else %}
+                <a href="{{ url_for('auth.login') }}" class="nav-login {{ 'active' if active == 'profile' }}">Log in</a>
+            {% endif %}
         </div>
     </header>
 

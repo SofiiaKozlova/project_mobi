@@ -126,3 +126,42 @@ Running on http://127.0.0.1:5000
 ```
 
 Open that address in your browser.
+
+---
+
+## Accounts + daily email reminders (SendGrid)
+
+**New files:** `auth.py` (accounts), `emailer.py` (SendGrid), `notifications.py`
+(daily reminder logic + optional scheduler), `send_daily_emails.py` (cron runner).
+
+Users register at `/register`, set preferences at `/profile`, and can receive a
+daily email listing parks that match their ideal temperature and/or that are
+cooler than the city average. Accounts live in `data/users.db` (SQLite, gitignored).
+
+### Set up SendGrid (Python)
+1. In SendGrid, verify a sender (Settings → Sender Authentication → Single Sender),
+   and create an API key (Settings → API Keys → Full Access or "Mail Send").
+2. Copy `.env.example` to `.env` and fill in:
+   ```
+   SENDGRID_API_KEY=SG.xxxxx
+   SENDGRID_FROM_EMAIL=your_verified_sender@domain.com
+   APP_BASE_URL=https://your-deployed-url
+   ```
+3. Send yourself a test email:
+   ```
+   python send_daily_emails.py --test you@example.com
+   ```
+
+### Send the daily reminders
+- **Production (recommended):** schedule the standalone runner once a day, e.g. cron:
+  ```
+  0 8 * * *  cd /path/to/project_mobi && /path/to/.venv/bin/python send_daily_emails.py
+  ```
+  On Windows use Task Scheduler to run the same command.
+- **Or in-app scheduler:** set `ENABLE_SCHEDULER=1` and `SEND_HOUR=8` in `.env`
+  and the running app sends daily at that hour (Europe/Berlin). Needs `APScheduler`
+  (already in requirements.txt).
+
+We call SendGrid's v3 Web API directly with `requests`, so no SDK is required.
+To use SendGrid's official package instead, `pip install sendgrid` and swap the
+body of `send_email()` in `emailer.py`.

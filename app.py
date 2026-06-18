@@ -20,6 +20,26 @@ try:
 except Exception as e:
     print(f"Note: API routes not loaded ({e}). Netatmo/Copernicus endpoints won't work.")
 
+# ── Accounts + email reminders ──
+from auth import auth_bp, init_db, close_db, current_user
+
+app.register_blueprint(auth_bp)
+app.teardown_appcontext(close_db)
+
+with app.app_context():
+    init_db()
+
+# Make the logged-in user available to every template (for the nav bar)
+@app.context_processor
+def inject_user():
+    return {"current_user": current_user()}
+
+# Optional in-app daily scheduler (set ENABLE_SCHEDULER=1 to use it)
+try:
+    from notifications import init_scheduler
+    init_scheduler(app)
+except Exception as e:
+    print(f"Note: scheduler not started ({e}).")
 
 FEEDBACK_DIR = os.path.join("data", "feedback")
 os.makedirs(FEEDBACK_DIR, exist_ok=True)
@@ -42,7 +62,7 @@ def load_parks():
 # ─────────────────────────────────────────────
 
 @app.route("/")
-def home():
+def explore():
     return render_template("explore.html", active="explore")
 
 @app.route("/compare")
@@ -69,21 +89,7 @@ def park_detail(park_id):
     return render_template("park_detail.html", park=park, active="explore")
 
 
-# ── Profile / auth (UI scaffold — login + email storage is the next round) ──
-@app.route("/profile")
-def profile():
-    return render_template("profile.html", active="profile")
-
-
-@app.route("/login")
-def login():
-    return render_template("login.html", active="profile")
-
-
-@app.route("/register")
-def register():
-    return render_template("register.html", active="profile")
-
+# ── Profile / auth (/register, /login, /logout, /profile) live in auth.py ──
 
 # ─────────────────────────────────────────────
 #  FEEDBACK  (unchanged behaviour)

@@ -1381,3 +1381,15 @@ textarea.date-input { min-height: 120px; resize: vertical; }
     background: var(--green-pale); color: var(--green-dark);
     border-radius: var(--radius); padding: 12px 16px; font-size: 0.9rem;
 }
+
+/* ── Auth additions (accounts + email round) ── */
+.nav-login, .nav-logout {
+    color: var(--green-pale); text-decoration: none; font-size: 0.85rem;
+    opacity: 0.8; padding: 6px 10px; border-radius: var(--radius-sm); transition: 0.18s;
+}
+.nav-login:hover, .nav-logout:hover { opacity: 1; background: rgba(255,255,255,0.08); }
+.nav-login.active { opacity: 1; }
+.auth-divider { border: none; border-top: 1px solid var(--sand); margin: 16px 0; }
+.auth-inline { display: inline-flex; align-items: center; gap: 8px; margin-top: 5px; }
+.auth-inline .date-input { max-width: 120px; }
+.flash-message.error { background: #fbeaea; color: #9b2c2c; }

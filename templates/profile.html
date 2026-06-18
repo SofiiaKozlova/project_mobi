@@ -4,16 +4,47 @@
 <div class="auth-page">
     <div class="page-head">
         <h1 class="page-title">Your profile</h1>
-        <p class="page-sub">Sign in to save your favourite parks and get a daily email when a park matches your ideal conditions.</p>
+        <p class="page-sub">Signed in as <strong>{{ user['email'] }}</strong>. Choose what reminders you'd like by email.</p>
     </div>
     <div class="auth-card">
-        <div class="auth-placeholder">
-            <p>Accounts and daily email reminders are coming next.</p>
-            <div class="auth-actions">
-                <a class="date-btn" href="{{ url_for('login') }}">Log in</a>
-                <a class="btn-reset" href="{{ url_for('register') }}">Create account</a>
-            </div>
-        </div>
+        <form method="post" action="{{ url_for('auth.profile') }}">
+            <label class="auth-checkbox">
+                <input type="checkbox" name="notify_enabled" {{ 'checked' if user['notify_enabled'] }}>
+                Send me a daily reminder email
+            </label>
+
+            <hr class="auth-divider">
+
+            <label class="auth-checkbox">
+                <input type="checkbox" name="notify_comfortable" {{ 'checked' if user['notify_comfortable'] }}>
+                Comfortable reminder — parks at or below my ideal temperature
+            </label>
+            <label class="auth-label">Ideal temperature
+                <span class="auth-inline">
+                    <input type="number" name="ideal_temp" class="date-input" step="0.5"
+                           value="{{ user['ideal_temp'] if user['ideal_temp'] is not none else 22 }}"> °C
+                </span>
+            </label>
+
+            <hr class="auth-divider">
+
+            <label class="auth-checkbox">
+                <input type="checkbox" name="notify_recommendation" {{ 'checked' if user['notify_recommendation'] }}>
+                Recommendation reminder — parks cooler than the city average
+            </label>
+            <label class="auth-label">Notify me if a park is at least
+                <span class="auth-inline">
+                    <input type="number" name="cooler_threshold" class="date-input" step="0.5" min="0"
+                           value="{{ user['cooler_threshold'] }}"> °C cooler
+                </span>
+            </label>
+
+            <button type="submit" class="date-btn">Save preferences</button>
+        </form>
+        {% if user['last_sent'] %}
+            <p class="auth-switch">Last reminder sent: {{ user['last_sent'] }}</p>
+        {% endif %}
+        <p class="auth-switch"><a href="{{ url_for('auth.logout') }}">Log out</a></p>
     </div>
 </div>
 {% endblock %}
