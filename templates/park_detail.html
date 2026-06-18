@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}{{ park.name }} — CoolPark Bamberg{% endblock %}
+
+{% block head %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='feedback.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="detail-page"
+     data-park-id="{{ park.id }}"
+     data-lat="{{ park.lat }}"
+     data-lon="{{ park.lon }}">
+
+    <a class="back-link" href="{{ url_for('explore') }}">← All parks</a>
+
+    <div class="detail-hero">
+        <div class="detail-hero-main">
+            <h1 class="detail-title">{{ park.name }}</h1>
+            <div class="detail-district">{{ park.district }}</div>
+            <p class="detail-desc">{{ park.desc }}</p>
+            <div class="detail-nav">
+                <a class="gmaps-link" target="_blank" rel="noopener"
+                   href="https://www.google.com/maps/dir/?api=1&destination={{ park.lat }},{{ park.lon }}&travelmode=walking">🚶 Walking directions</a>
+                <a class="gmaps-link" target="_blank" rel="noopener"
+                   href="https://www.google.com/maps/dir/?api=1&destination={{ park.lat }},{{ park.lon }}&travelmode=transit">🚌 Public transport</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="detail-columns">
+        <section class="detail-section">
+            <div class="detail-section-title">Park conditions</div>
+            <div class="detail-weather-grid" id="dp-conditions"></div>
+        </section>
+
+        <section class="detail-section">
+            <div class="detail-section-title">Live conditions</div>
+            <div id="dp-live"><span class="poi-loading">Loading live conditions…</span></div>
+        </section>
+
+        <section class="detail-section">
+            <div class="detail-section-title">Nearby points of interest</div>
+            <div id="dp-poi"><span class="poi-loading">Fetching nearby places from OpenStreetMap…</span></div>
+        </section>
+    </div>
+
+    <div class="detail-section feedback-section">
+        <a href="{{ url_for('feedback', park=park.id) }}" class="feedback-link">Leave feedback or a comment</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+    <script src="{{ url_for('static', filename='park_detail.js') }}"></script>
+{% endblock %}

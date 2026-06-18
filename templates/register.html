@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Create account — CoolPark Bamberg{% endblock %}
+{% block content %}
+<div class="auth-page">
+    <div class="page-head"><h1 class="page-title">Create account</h1>
+        <p class="page-sub">Your email is only used to send the daily park reminders you ask for.</p>
+    </div>
+    <div class="auth-card">
+        <label class="auth-label">Email
+            <input type="email" class="date-input" placeholder="you@example.com" disabled>
+        </label>
+        <label class="auth-label">Password
+            <input type="password" class="date-input" placeholder="Choose a password" disabled>
+        </label>
+        <label class="auth-checkbox">
+            <input type="checkbox" disabled> Email me a daily park reminder
+        </label>
+        <button class="date-btn" disabled>Create account (coming soon)</button>
+        <p class="auth-switch">Already have an account? <a href="{{ url_for('login') }}">Log in</a></p>
+    </div>
+</div>
+{% endblock %}

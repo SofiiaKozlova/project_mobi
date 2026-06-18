@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Explore parks — CoolPark Bamberg{% endblock %}
+
+{% block head %}
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+{% endblock %}
+
+{% block content %}
+<div class="app">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="sidebar-section">
+            <div class="sidebar-title">Park conditions</div>
+            <p class="sidebar-hint">Pick what matters to you. Parks are ranked by your choices.</p>
+            <div class="filter-grid" id="condition-filters">
+                <button class="filter-btn" data-filter="shade" title="Tree cover, measured from satellite vegetation">
+                    <span class="filter-icon">🌳</span>Shade
+                </button>
+                <button class="filter-btn" data-filter="quiet" title="Distance from busy roads">
+                    <span class="filter-icon">🤫</span>Quiet
+                </button>
+                <button class="filter-btn" data-filter="benches" title="How many benches the park has">
+                    <span class="filter-icon">🪑</span>Benches
+                </button>
+                <button class="filter-btn" data-filter="park_size" title="How large the park is">
+                    <span class="filter-icon">🏞️</span>Park size
+                </button>
+            </div>
+        </div>
+
+        <div class="sidebar-section">
+            <div class="sidebar-title">Points of interest</div>
+            <div class="poi-filter-list" id="poi-filters">
+                <button class="poi-filter-btn active" data-poi="transit">
+                    <span class="poi-dot" style="background:#4a86e8;"></span>Public transport
+                </button>
+                <button class="poi-filter-btn active" data-poi="food">
+                    <span class="poi-dot" style="background:#e67e22;"></span>Restaurants &amp; cafés
+                </button>
+                <button class="poi-filter-btn active" data-poi="icecream">
+                    <span class="poi-dot" style="background:#f4b183;"></span>Ice-cream
+                </button>
+                <button class="poi-filter-btn active" data-poi="sightseeing">
+                    <span class="poi-dot" style="background:#27ae60;"></span>Sightseeing
+                </button>
+                <button class="poi-filter-btn active" data-poi="playground">
+                    <span class="poi-dot" style="background:#e91e8c;"></span>Playground
+                </button>
+            </div>
+        </div>
+
+        <div class="sidebar-section">
+            <button class="btn-reset" id="btn-reset">Reset filters</button>
+        </div>
+    </aside>
+
+    <!-- MAIN -->
+    <section class="main">
+        <div class="score-banner visible" id="weather-banner">
+            <span>🌡️</span><span id="weather-banner-text">Loading current conditions…</span>
+        </div>
+        <div class="score-banner" id="filter-banner">
+            <span>🎯</span><span id="filter-banner-text">Showing all parks. Pick a condition to rank them.</span>
+        </div>
+
+        <div id="map"></div>
+
+        <div class="parks-grid" id="parks-grid"></div>
+
+        <div class="empty-state" id="empty-state">
+            <div class="es-icon">🌿</div>
+            <h3>No parks match those conditions</h3>
+            <p>Try removing a condition to see more results.</p>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="{{ url_for('static', filename='explore.js') }}"></script>
+{% endblock %}

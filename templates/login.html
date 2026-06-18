@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Log in — CoolPark Bamberg{% endblock %}
+{% block content %}
+<div class="auth-page">
+    <div class="page-head"><h1 class="page-title">Log in</h1></div>
+    <div class="auth-card">
+        <!-- Scaffold only: wiring to accounts + email comes in the next round -->
+        <label class="auth-label">Email
+            <input type="email" class="date-input" placeholder="you@example.com" disabled>
+        </label>
+        <label class="auth-label">Password
+            <input type="password" class="date-input" placeholder="••••••••" disabled>
+        </label>
+        <button class="date-btn" disabled>Log in (coming soon)</button>
+        <p class="auth-switch">No account yet? <a href="{{ url_for('register') }}">Create one</a></p>
+    </div>
+</div>
+{% endblock %}

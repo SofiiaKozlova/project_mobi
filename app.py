@@ -24,11 +24,70 @@ except Exception as e:
 FEEDBACK_DIR = os.path.join("data", "feedback")
 os.makedirs(FEEDBACK_DIR, exist_ok=True)
 
+# ── Static park metadata (single source of truth shared with the front-end) ──
+# Loaded so server-rendered pages (e.g. /park/<id>) know park names/ids.
+PARKS_FILE = os.path.join("data", "parks.json")
+
+
+def load_parks():
+    try:
+        with open(PARKS_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return []
+
+
+# ─────────────────────────────────────────────
+#  PAGES  (the old single page is now split up)
+# ─────────────────────────────────────────────
 
 @app.route("/")
 def home():
-    return render_template("index.html")
+    return render_template("explore.html", active="explore")
 
+@app.route("/compare")
+def compare():
+    return render_template("compare.html", active="compare")
+
+
+@app.route("/planner")
+def planner():
+    return render_template("planner.html", active="planner")
+
+
+@app.route("/reminders")
+def reminders():
+    return render_template("reminders.html", active="reminders")
+
+
+@app.route("/park/<park_id>")
+def park_detail(park_id):
+    parks = load_parks()
+    park = next((p for p in parks if p["id"] == park_id), None)
+    if not park:
+        return render_template("park_not_found.html", park_id=park_id), 404
+    return render_template("park_detail.html", park=park, active="explore")
+
+
+# ── Profile / auth (UI scaffold — login + email storage is the next round) ──
+@app.route("/profile")
+def profile():
+    return render_template("profile.html", active="profile")
+
+
+@app.route("/login")
+def login():
+    return render_template("login.html", active="profile")
+
+
+@app.route("/register")
+def register():
+    return render_template("register.html", active="profile")
+
+
+# ─────────────────────────────────────────────
+#  FEEDBACK  (unchanged behaviour)
+# ─────────────────────────────────────────────
 
 @app.route("/feedback")
 def feedback():

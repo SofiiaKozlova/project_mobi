@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Compare parks — CoolPark Bamberg{% endblock %}
+
+{% block content %}
+<div class="compare-page">
+    <div class="page-head">
+        <h1 class="page-title">Compare parks</h1>
+        <p class="page-sub">Pick two or more parks to see their conditions side by side.</p>
+    </div>
+
+    <div class="compare-picker" id="compare-picker"></div>
+
+    <div class="compare-toolbar">
+        <span id="compare-count-label">0 selected</span>
+        <button class="btn-reset" id="btn-clear-compare">Clear selection</button>
+    </div>
+
+    <div class="compare-table-wrap" id="compare-table">
+        <div class="empty-state visible">
+            <div class="es-icon">📊</div>
+            <h3>Nothing to compare yet</h3>
+            <p>Select at least two parks above.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+    <script src="{{ url_for('static', filename='compare.js') }}"></script>
+{% endblock %}

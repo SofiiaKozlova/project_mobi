@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Park not found — CoolPark Bamberg{% endblock %}
+{% block content %}
+<div class="empty-state visible" style="margin-top:60px">
+    <div class="es-icon">🌿</div>
+    <h3>We couldn't find that park</h3>
+    <p>"{{ park_id }}" isn't in our list. <a href="{{ url_for('explore') }}">Back to all parks →</a></p>
+</div>
+{% endblock %}

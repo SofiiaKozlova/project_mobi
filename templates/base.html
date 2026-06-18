@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}CoolPark Bamberg{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <header class="site-header">
+        <a class="logo" href="{{ url_for('explore') }}">
+            <span class="logo-leaf">🌿</span>
+            CoolPark <span class="logo-city">Bamberg</span>
+        </a>
+
+        <nav class="main-nav">
+            <a href="{{ url_for('explore') }}"   class="nav-link {{ 'active' if active == 'explore' }}">Explore</a>
+            <a href="{{ url_for('compare') }}"   class="nav-link {{ 'active' if active == 'compare' }}">Compare</a>
+            <a href="{{ url_for('planner') }}"   class="nav-link {{ 'active' if active == 'planner' }}">Planner</a>
+            <a href="{{ url_for('reminders') }}" class="nav-link {{ 'active' if active == 'reminders' }}">Reminders</a>
+        </nav>
+
+        <div class="header-right">
+            <span class="header-weather" id="header-weather" title="Live temperature in Bamberg">🌤️ —</span>
+            <a href="{{ url_for('profile') }}" class="avatar {{ 'active' if active == 'profile' }}" title="Your profile">S</a>
+        </div>
+    </header>
+
+    <main class="page">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash-message {{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <script src="{{ url_for('static', filename='common.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
