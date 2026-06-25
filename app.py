@@ -44,18 +44,14 @@ except Exception as e:
 FEEDBACK_DIR = os.path.join("data", "feedback")
 os.makedirs(FEEDBACK_DIR, exist_ok=True)
 
-# ── Static park metadata (single source of truth shared with the front-end) ──
-# Loaded so server-rendered pages (e.g. /park/<id>) know park names/ids.
-PARKS_FILE = os.path.join("data", "parks.json")
-
-
+# ── Park metadata, merged with the OSM cache (see park_data.py) ──
+# Used by server-rendered pages (e.g. /park/<id>) so coordinates match /api/parks.
 def load_parks():
     try:
-        with open(PARKS_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
+        from park_data import load_parks as _load
+        return _load(merged=True)
+    except Exception:
         return []
-
 
 # ─────────────────────────────────────────────
 #  PAGES  (the old single page is now split up)

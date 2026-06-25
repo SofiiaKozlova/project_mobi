@@ -296,14 +296,11 @@ def shade():
 # PARKS — serve the shared park metadata file
 # (single source of truth for every front-end page)
 # ────────────────────────────────────────────
-import json as _json
-
 @api_bp.route('/api/parks')
 def parks():
-    """Return the park metadata from data/parks.json."""
-    path = os.path.join('data', 'parks.json')
+    """Return the park metadata (data/parks.json) merged with the OSM cache."""
     try:
-        with open(path, 'r', encoding='utf-8') as f:
-            return jsonify(_json.load(f))
-    except (FileNotFoundError, _json.JSONDecodeError) as e:
-        return jsonify(error=f'parks.json not available: {e}'), 500
+        from park_data import load_parks
+        return jsonify(load_parks(merged=True))
+    except Exception as e:
+        return jsonify(error=f'could not load parks: {e}'), 500

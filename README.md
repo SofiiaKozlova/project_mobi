@@ -165,3 +165,37 @@ cooler than the city average. Accounts live in `data/users.db` (SQLite, gitignor
 We call SendGrid's v3 Web API directly with `requests`, so no SDK is required.
 To use SendGrid's official package instead, `pip install sendgrid` and swap the
 body of `send_email()` in `emailer.py`.
+
+---
+
+## OSM data round — real coordinates, benches, park size (cached)
+
+**New files:** `fetch_osm_data.py` (the fetcher), `park_data.py` (loads parks +
+overlays the cache), `park_scoring.py` (raw numbers → 1-10 scores).
+
+`fetch_osm_data.py` finds each park's polygon on OpenStreetMap and computes:
+
+- **Calibrated coordinates** — the polygon centroid replaces the hand-typed
+  lat/lon, so the map pin sits on the actual park.
+- **Park size** — the polygon area in hectares (the "Park size" fact + score).
+- **Benches** — count of `amenity=bench` inside the polygon (the "Benches" fact + score).
+
+It writes `data/park_geo.json`. The app merges that file over `data/parks.json`
+when serving `/api/parks` and `/park/<id>`, so pages load instantly from the
+cache instead of querying OSM live. If the cache is missing, the seed values are
+served unchanged (nothing breaks).
+
+### Run it
+```
+python fetch_osm_data.py          # all parks  (~1-2 min, paced for Overpass)
+python fetch_osm_data.py erba hain   # just specific parks
+```
+Park geometry barely changes, so running this weekly via cron is plenty.
+Each park entry in `park_geo.json` records `osm_type`, `osm_id`, `matched_name`
+and `fetched_at`, and `/api/parks` flags every field's `data_source`
+("osm centroid" / "osm" vs "manual") so you can see what's real vs. seed.
+
+> Tip: after running it, open `data/park_geo.json` and skim `matched_name` for
+> each park — if a match looks wrong (e.g. a tiny adjacent garden instead of the
+> main park), nudge that park's seed `lat`/`lon` in `parks.json` closer to the
+> real centre and re-run just that id.
