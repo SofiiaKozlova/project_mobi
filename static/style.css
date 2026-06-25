@@ -1393,3 +1393,19 @@ textarea.date-input { min-height: 120px; resize: vertical; }
 .auth-inline { display: inline-flex; align-items: center; gap: 8px; margin-top: 5px; }
 .auth-inline .date-input { max-width: 120px; }
 .flash-message.error { background: #fbeaea; color: #9b2c2c; }
+/* ── POI distance slider ── */
+.poi-radius { margin-bottom: 12px; }
+.poi-radius-row { display: flex; justify-content: space-between; align-items: baseline; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px; }
+.poi-radius-value { font-weight: 600; color: var(--green-mid); }
+#poi-radius { width: 100%; accent-color: var(--green-mid); cursor: pointer; }
+
+/* ── Detail live conditions (cleaner) ── */
+.live-temp { display: flex; align-items: baseline; gap: 8px; }
+.live-temp-value { font-family: 'Playfair Display', serif; font-size: 2rem; color: var(--green-dark); line-height: 1; }
+.live-temp-caption { font-size: 0.82rem; color: var(--text-muted); }
+.live-note { font-size: 0.85rem; color: var(--green-mid); margin: 6px 0 14px; font-weight: 500; }
+.live-rain { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: var(--radius-sm); font-size: 0.85rem; line-height: 1.4; }
+.live-rain.dry { background: #f1f6ea; }
+.live-rain.wet { background: #e8f0f7; }
+.live-rain-icon { font-size: 1.1rem; }
+.poi-radius-note { font-size: 0.74rem; color: var(--text-muted); margin: 0 0 10px; }

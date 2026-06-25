@@ -199,3 +199,52 @@ and `fetched_at`, and `/api/parks` flags every field's `data_source`
 > each park — if a match looks wrong (e.g. a tiny adjacent garden instead of the
 > main park), nudge that park's seed `lat`/`lon` in `parks.json` closer to the
 > real centre and re-run just that id.
+
+---
+
+## Update — all four conditions from data, POI controls, email fix
+
+**Overpass 406 fixed.** `fetch_osm_data.py` now sends a real `User-Agent`
+(Overpass rejects the default `python-requests` agent with 406) and falls back
+across mirrors. Optionally put your own email in the User-Agent string near the
+top of `overpass()` — it's good OSM etiquette. Re-run:
+```
+python fetch_osm_data.py
+```
+
+**All four conditions now come from OpenStreetMap** (when the cache exists):
+- **Shade** — canopy estimate from woodland coverage (`natural=wood` / `landuse=forest`)
+  and mapped-tree density (`natural=tree`) inside the park polygon.
+- **Quiet** — distance from the park centroid to the nearest busy road.
+- **Benches** — `amenity=bench` count inside the polygon.
+- **Park size** — polygon area in hectares.
+
+These are baked into `data/park_geo.json` and merged at serve time, so the page
+doesn't recompute anything live. Until you run the fetch, the app falls back to
+the seed values (and Quiet is still computed client-side as before).
+
+**Points of interest:**
+- The Explore sidebar has a **distance slider** (200–2000 m). Changing it
+  refetches and re-ranks nearby places.
+- Your selected POI types **and** the radius are remembered and reused on each
+  **park detail page** — it shows only the categories you picked on Explore.
+- A park detail page **widens the radius automatically** (up to 3 km) until it
+  finds at least one of your selected POIs, so the list is never empty.
+
+**Daily emails.** The recommendation email is no longer empty when no park beats
+your threshold — it falls back to "today's coolest parks", so a daily email
+always has content. If you only got the `--test` mail, you still need to
+*schedule* the real send:
+
+- **Windows (Task Scheduler):** create a Basic Task → Daily → Start a program:
+  - Program: `C:\...\project_mobi\venv\Scripts\python.exe`
+  - Arguments: `send_daily_emails.py`
+  - Start in: `C:\...\project_mobi`
+- **Linux/Mac (cron):** `0 8 * * * cd /path/to/project_mobi && .venv/bin/python send_daily_emails.py`
+
+Run it once by hand to confirm — it now prints a per-user status line:
+```
+python send_daily_emails.py
+```
+Make sure your profile has **"Send me a daily reminder"** ticked and at least one
+reminder type enabled.

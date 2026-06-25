@@ -18,7 +18,7 @@ from datetime import datetime, date
 
 import requests
 
-from emailer import send_email
+from emailer import send_email, is_configured
 
 PARKS_FILE = os.path.join("data", "parks.json")
 DB_PATH = os.path.join("data", "users.db")
@@ -79,21 +79,35 @@ def build_user_email(user, parks, temps, avg):
                 f"<h3>Parks at or below {ideal:.0f}°C right now</h3><ul>{rows}</ul>"
             )
 
-    # Recommendation reminder — parks cooler than the city average
+    # Recommendation reminder — parks cooler than the city average.
+    # Always include something useful: if nothing beats the threshold, show
+    # today's coolest parks anyway, so the daily email is never empty.
     if user["notify_recommendation"] and avg is not None:
         threshold = user["cooler_threshold"]
-        cooler = sorted(
-            [(pid, t, avg - t) for pid, t in temps.items() if t is not None and (avg - t) >= threshold],
+        ranked = sorted(
+            [(pid, t, avg - t) for pid, t in temps.items() if t is not None],
             key=lambda x: x[2], reverse=True,
         )
-        if cooler:
+        beating = [r for r in ranked if r[2] >= threshold]
+        if beating:
             rows = "".join(
                 f"<li><strong>{by_id[pid]['name']}</strong> is {diff:.1f}° cooler "
                 f"({t:.1f}°C vs {avg:.1f}°C city average)</li>"
-                for pid, t, diff in cooler
+                for pid, t, diff in beating
             )
             sections.append(
                 f"<h3>Parks at least {threshold:.0f}° cooler than Bamberg</h3><ul>{rows}</ul>"
+            )
+        elif ranked:
+            rows = "".join(
+                f"<li><strong>{by_id[pid]['name']}</strong> — {t:.1f}°C"
+                f"{f' ({diff:.1f}° cooler)' if diff > 0 else ''}</li>"
+                for pid, t, diff in ranked[:3]
+            )
+            sections.append(
+                f"<h3>Today's coolest parks</h3>"
+                f"<p style='margin:0 0 6px;color:#555'>Nothing was {threshold:.0f}° below the "
+                f"{avg:.1f}°C city average today, so here are the coolest right now:</p><ul>{rows}</ul>"
             )
 
     if not sections:
@@ -121,12 +135,24 @@ def build_user_email(user, parks, temps, avg):
 #  Send to everyone who opted in
 # ──────────────────────────────────────────────
 def send_daily_reminders():
+    if not is_configured():
+        print("[notifications] SendGrid not configured — set SENDGRID_API_KEY and SENDGRID_FROM_EMAIL in .env.")
+        return 0, 0
+
     parks = load_parks()
     temps, avg = get_park_temps(parks)
+    if avg is None:
+        print("[notifications] could not fetch park temperatures (Open-Meteo unreachable?). Aborting.")
+        return 0, 0
 
     con = sqlite3.connect(DB_PATH)
     con.row_factory = sqlite3.Row
     users = con.execute("SELECT * FROM users WHERE notify_enabled = 1").fetchall()
+
+    if not users:
+        print("[notifications] no users have daily email enabled. Turn it on in /profile.")
+        con.close()
+        return 0, 0
 
     sent, skipped = 0, 0
     today = date.today().isoformat()
@@ -134,6 +160,8 @@ def send_daily_reminders():
         built = build_user_email(user, parks, temps, avg)
         if built is None:
             skipped += 1
+            print(f"[notifications] {user['email']}: nothing to send "
+                  "(enable a reminder type in /profile, or set an ideal temperature).")
             continue
         subject, html = built
         ok, info = send_email(user["email"], subject, html)
@@ -141,11 +169,12 @@ def send_daily_reminders():
             con.execute("UPDATE users SET last_sent = ? WHERE id = ?", (today, user["id"]))
             con.commit()
             sent += 1
+            print(f"[notifications] {user['email']}: sent ✅")
         else:
-            print(f"[notifications] {user['email']}: {info}")
+            print(f"[notifications] {user['email']}: FAILED — {info}")
     con.close()
 
-    print(f"[notifications] {datetime.now().isoformat(timespec='seconds')} — sent {sent}, skipped {skipped} (no matches).")
+    print(f"[notifications] {datetime.now().isoformat(timespec='seconds')} — sent {sent}, skipped {skipped}.")
     return sent, skipped
 
 

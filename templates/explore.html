@@ -30,6 +30,13 @@
 
         <div class="sidebar-section">
             <div class="sidebar-title">Points of interest</div>
+            <div class="poi-radius">
+                <div class="poi-radius-row">
+                    <span>Within</span>
+                    <span class="poi-radius-value" id="poi-radius-label">400 m</span>
+                </div>
+                <input type="range" id="poi-radius" min="200" max="2000" step="100" value="400">
+            </div>
             <div class="poi-filter-list" id="poi-filters">
                 <button class="poi-filter-btn active" data-poi="transit">
                     <span class="poi-dot" style="background:#4a86e8;"></span>Public transport

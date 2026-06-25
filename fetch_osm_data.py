@@ -30,7 +30,11 @@ import requests
 
 PARKS_FILE = os.path.join("data", "parks.json")
 CACHE_FILE = os.path.join("data", "park_geo.json")
-OVERPASS_URL = "https://overpass-api.de/api/interpreter"
+OVERPASS_ENDPOINTS = [
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+]
 SEARCH_RADIUS = 700        # metres around the seed point to look for the park polygon
 REQUEST_PAUSE = 2.0        # seconds between Overpass calls (be polite)
 
@@ -126,9 +130,28 @@ def haversine(lat1, lon1, lat2, lon2):
 #  Overpass
 # ──────────────────────────────────────────────
 def overpass(query):
-    resp = requests.post(OVERPASS_URL, data={"data": query}, timeout=90)
-    resp.raise_for_status()
-    return resp.json()
+    """
+    POST a query to Overpass. We must send a real User-Agent — Overpass
+    returns "406 Not Acceptable" for the default python-requests agent.
+    Falls back across mirrors if one is busy/blocked.
+    """
+    headers = {
+        "User-Agent": "CoolParkBamberg/1.0 (urban-data student project; contact: your-email@example.com)",
+        "Accept": "application/json",
+    }
+    last_err = None
+    for url in OVERPASS_ENDPOINTS:
+        try:
+            resp = requests.post(url, data={"data": query}, headers=headers, timeout=90)
+            if resp.status_code == 429:           # rate limited — wait and retry once
+                time.sleep(5)
+                resp = requests.post(url, data={"data": query}, headers=headers, timeout=90)
+            resp.raise_for_status()
+            return resp.json()
+        except requests.RequestException as e:
+            last_err = e
+            continue
+    raise last_err
 
 
 def ring_from_element(el):
@@ -186,23 +209,103 @@ def find_polygon(park):
     return candidates[0]
 
 
-def count_benches(ring):
-    """Count amenity=bench nodes inside the polygon."""
+def fetch_inside(ring, area_ha):
+    """
+    One query for everything inside the polygon:
+      • amenity=bench  → bench_count (the Benches fact)
+      • natural=tree   → individual trees (for canopy density)
+      • natural=wood / landuse=forest → woodland areas (for canopy fraction)
+    Returns (bench_count, shade_score) where shade_score is 1-10.
+    """
     poly = " ".join(f'{p["lat"]} {p["lon"]}' for p in ring)
-    query = f'[out:json][timeout:60];node["amenity"="bench"](poly:"{poly}");out count;'
+    query = (
+        f'[out:json][timeout:90];('
+        f'node["amenity"="bench"](poly:"{poly}");'
+        f'node["natural"="tree"](poly:"{poly}");'
+        f'way["natural"="wood"](poly:"{poly}");'
+        f'way["landuse"="forest"](poly:"{poly}");'
+        f'way["natural"="scrub"](poly:"{poly}");'
+        f');out geom;'
+    )
     try:
         data = overpass(query)
-        # out count returns an element with tags.nodes / tags.total
-        for el in data.get("elements", []):
-            tags = el.get("tags", {})
-            if "total" in tags:
-                return int(tags["total"])
-            if "nodes" in tags:
-                return int(tags["nodes"])
-        return 0
     except Exception as e:
-        print(f"    bench count failed: {e}")
+        print(f"    inside-polygon query failed: {e}")
+        return None, None
+
+    bench_count = 0
+    tree_count = 0
+    wood_area = 0.0
+    for el in data.get("elements", []):
+        tags = el.get("tags", {})
+        if el["type"] == "node" and tags.get("amenity") == "bench":
+            bench_count += 1
+        elif el["type"] == "node" and tags.get("natural") == "tree":
+            tree_count += 1
+        elif el["type"] == "way" and (tags.get("natural") in ("wood", "scrub") or tags.get("landuse") == "forest"):
+            r = ring_from_element(el)
+            if len(r) >= 3:
+                wood_area += polygon_area_ha(r)
+
+    shade_score = estimate_shade(area_ha, tree_count, wood_area)
+    return bench_count, shade_score
+
+
+def estimate_shade(area_ha, tree_count, wood_area_ha):
+    """
+    Combine two canopy signals into a 1-10 Shade score:
+      • woodland fraction — area of wood/forest inside the park ÷ park area
+        (works for forests where individual trees aren't mapped)
+      • tree density      — mapped trees per hectare, saturating at ~60/ha
+        (works for ornamental parks where trees are mapped individually)
+    We take the stronger of the two signals.
+    """
+    if not area_ha or area_ha <= 0:
         return None
+    canopy_fraction = min(1.0, wood_area_ha / area_ha) if wood_area_ha else 0.0
+    density = (tree_count / area_ha) if area_ha else 0.0
+    density_fraction = min(1.0, density / 60.0)
+    combined = max(canopy_fraction, density_fraction)
+    return max(1, min(10, round(1 + 9 * combined)))
+
+
+def estimate_quiet(centroid):
+    """
+    Quiet score (1-10) from distance to the nearest busy road
+    (motorway/trunk/primary/secondary). Farther = quieter.
+    """
+    lat, lon = centroid["lat"], centroid["lon"]
+    query = (
+        f'[out:json][timeout:60];'
+        f'way["highway"~"^(motorway|motorway_link|trunk|trunk_link|primary|secondary)$"]'
+        f'(around:800,{lat},{lon});out geom;'
+    )
+    try:
+        data = overpass(query)
+    except Exception as e:
+        print(f"    road query failed: {e}")
+        return None
+
+    min_dist = float("inf")
+    for el in data.get("elements", []):
+        for g in el.get("geometry", []):
+            d = haversine(lat, lon, g["lat"], g["lon"])
+            if d < min_dist:
+                min_dist = d
+    if min_dist == float("inf"):
+        return 10  # no busy road within 800 m → very quiet
+
+    if min_dist < 40:
+        score = 1
+    elif min_dist < 80:
+        score = 2 + (min_dist - 40) / 40
+    elif min_dist < 200:
+        score = 4 + ((min_dist - 80) / 120) * 2
+    elif min_dist < 400:
+        score = 7 + ((min_dist - 200) / 200)
+    else:
+        score = 8 + (min_dist - 400) / 300
+    return max(1, min(10, round(score)))
 
 
 # ──────────────────────────────────────────────
@@ -218,8 +321,11 @@ def main():
 
     cache = {}
     if os.path.exists(CACHE_FILE):
-        with open(CACHE_FILE, "r", encoding="utf-8") as f:
-            cache = json.load(f)
+        try:
+            with open(CACHE_FILE, "r", encoding="utf-8") as f:
+                cache = json.load(f)
+        except json.JSONDecodeError:
+            cache = {}
 
     for park in parks:
         pid = park["id"]
@@ -237,20 +343,25 @@ def main():
             continue
 
         time.sleep(REQUEST_PAUSE)
-        benches = count_benches(best["ring"])
+        benches, shade = fetch_inside(best["ring"], best["area_ha"])
+        time.sleep(REQUEST_PAUSE)
+        quiet = estimate_quiet(best["centroid"])
 
         cache[pid] = {
             "lat": round(best["centroid"]["lat"], 7),
             "lon": round(best["centroid"]["lon"], 7),
             "area_ha": round(best["area_ha"], 1),
             "bench_count": benches,
+            "shade_score": shade,
+            "quiet_score": quiet,
             "osm_type": best["osm_type"],
             "osm_id": best["osm_id"],
             "matched_name": best["name"],
             "fetched_at": time.strftime("%Y-%m-%d"),
         }
         print(f"    centroid ({cache[pid]['lat']}, {cache[pid]['lon']}) · "
-              f"{cache[pid]['area_ha']} ha · {benches} benches · matched \"{best['name']}\"")
+              f"{cache[pid]['area_ha']} ha · {benches} benches · "
+              f"shade {shade}/10 · quiet {quiet}/10 · matched \"{best['name']}\"")
         time.sleep(REQUEST_PAUSE)
 
     os.makedirs(os.path.dirname(CACHE_FILE), exist_ok=True)

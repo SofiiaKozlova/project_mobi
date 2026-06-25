@@ -50,6 +50,12 @@ def merge_osm(park, geo):
         if s is not None:
             park["conditions"]["benches"] = s
         park["data_source"]["bench_count"] = "osm"
+    if g.get("shade_score") is not None:
+        park["conditions"]["shade"] = g["shade_score"]
+        park["data_source"]["shade"] = "osm"
+    if g.get("quiet_score") is not None:
+        park["conditions"]["quiet"] = g["quiet_score"]
+        park["data_source"]["quiet"] = "osm"
     park["osm"] = {k: g.get(k) for k in ("osm_type", "osm_id", "matched_name", "fetched_at")}
     return park
 

@@ -4,7 +4,7 @@
    ============================================================ */
 
 let activeConditions = new Set();
-let activePoi = new Set(['transit', 'food', 'icecream', 'sightseeing', 'playground']);
+let activePoi = new Set(getPoiCategories());   // restore saved selection
 let parkMarkers = {};
 let userLocationMarker = null;
 let map = null;
@@ -160,6 +160,18 @@ function renderCard(park, score, grid) {
 }
 
 /* ─── FILTER BUTTONS ─── */
+function syncPoiButtons() {
+    document.querySelectorAll('.poi-filter-btn').forEach(b =>
+        b.classList.toggle('active', activePoi.has(b.dataset.poi)));
+}
+
+function applyPoiVisibility() {
+    document.querySelectorAll('.poi-badge').forEach(badge => {
+        const cat = [...badge.classList].find(c => POI_COLORS[c]);
+        if (cat) badge.classList.toggle('hidden', !activePoi.has(cat));
+    });
+}
+
 function wireFilters() {
     document.getElementById('condition-filters').addEventListener('click', e => {
         const btn = e.target.closest('.filter-btn');
@@ -176,17 +188,35 @@ function wireFilters() {
         const p = btn.dataset.poi;
         if (activePoi.has(p)) { activePoi.delete(p); btn.classList.remove('active'); }
         else { activePoi.add(p); btn.classList.add('active'); }
-        document.querySelectorAll('.poi-badge').forEach(badge => {
-            const cat = [...badge.classList].find(c => POI_COLORS[c]);
-            if (cat) badge.classList.toggle('hidden', !activePoi.has(cat));
-        });
+        setPoiCategories([...activePoi]);          // persist for the detail page
+        applyPoiVisibility();
     });
+
+    // POI distance slider
+    const slider = document.getElementById('poi-radius');
+    const label = document.getElementById('poi-radius-label');
+    if (slider) {
+        slider.value = getPoiRadius();
+        if (label) label.textContent = `${slider.value} m`;
+        slider.addEventListener('input', () => { if (label) label.textContent = `${slider.value} m`; });
+        let t;
+        slider.addEventListener('change', () => {
+            clearTimeout(t);
+            t = setTimeout(() => {
+                setBatchRadius(parseInt(slider.value, 10));   // persist + force refetch
+                const grid = document.getElementById('parks-grid');
+                if (grid) grid.querySelectorAll('.poi-row').forEach(r => r.innerHTML = '<span class="poi-loading">Updating nearby places…</span>');
+                fetchAllPOIs().then(renderAll);
+            }, 250);
+        });
+    }
 
     document.getElementById('btn-reset').addEventListener('click', () => {
         activeConditions.clear();
-        activePoi = new Set(['transit', 'food', 'icecream', 'sightseeing', 'playground']);
+        activePoi = new Set(POI_CATEGORIES);
+        setPoiCategories([...activePoi]);
         document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.poi-filter-btn').forEach(b => b.classList.add('active'));
+        syncPoiButtons();
         renderAll();
     });
 }
@@ -194,12 +224,13 @@ function wireFilters() {
 /* ─── BOOT ─── */
 document.addEventListener('DOMContentLoaded', () => {
     initMap();
+    syncPoiButtons();          // reflect saved POI selection
     wireFilters();
     loadParks().then(() => {
         initParkMarkers();
         renderAll();                       // cards show immediately (with POI placeholders)
         fetchAllPOIs().then(renderAll);    // refill POI badges once loaded
-        computeQuietness();                // recompute quiet from roads
+        computeQuietness();                // quiet from roads (skipped if cache has it)
         loadAllParkTemps();
     });
 });

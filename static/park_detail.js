@@ -15,14 +15,20 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!park) return;
 
         renderConditions(park);
+        computeQuietness();   // only runs if the OSM cache didn't provide Quiet
 
-        // recompute quiet from roads, then redraw the conditions grid
-        computeQuietness();
+        // POIs — only the categories selected on the Explore tab, within the
+        // chosen radius, widening automatically until at least one is found.
+        const categories = getPoiCategories();
+        const radius = getPoiRadius();
+        const poiEl = document.getElementById('dp-poi');
+        if (!categories.length) {
+            poiEl.innerHTML = '<p class="poi-loading">No point-of-interest types are selected. Pick some on the Explore tab.</p>';
+        } else {
+            poiEl.innerHTML = '<span class="poi-loading">Fetching nearby places from OpenStreetMap…</span>';
+            fetchPOIsForPark(park, { categories, radius }).then(poi => renderPOIs(poi, radius));
+        }
 
-        // POIs (needs all parks loaded so each node maps to its nearest park)
-        fetchPOIs(park).then(renderPOIs);
-
-        // live temperature + rain
         loadAllParkTemps();
         renderLive(park, lat, lon);
     });
@@ -52,30 +58,51 @@ function renderConditions(park) {
     }).join('');
 }
 
+/* ─── Live conditions: temperature + rain (clean layout) ─── */
 function renderLive(park, lat, lon) {
     const el = document.getElementById('dp-live');
     if (!el) return;
     Promise.all([fetchRain(lat, lon), fetchParkTemp(park)]).then(([{ rain, prob }, temp]) => {
         const wet = rain > 0.1 || prob > 50;
-        const tempLine = temp !== null
-            ? `<div class="temp-line"><span class="rain-icon">🌡️</span><span><strong>${temp.toFixed(1)}°C</strong> at this park right now${bambergAvgTemp !== null ? ` <span class="temp-vs">(${(temp - bambergAvgTemp >= 0 ? '+' : '')}${(temp - bambergAvgTemp).toFixed(1)}° vs city avg)</span>` : ''}</span></div>`
-            : '';
-        el.innerHTML = tempLine +
-            `<div class="rain-line ${wet ? 'wet' : 'dry'}"><span class="rain-icon">${wet ? '🌧️' : '☀️'}</span><span><strong>${rain.toFixed(1)} mm</strong> now · <strong>${prob}%</strong> chance this hour — ${wet ? 'Bring an umbrella' : 'Looks dry'}</span></div>`;
+
+        let tempBlock = '';
+        if (temp !== null && temp !== undefined) {
+            let note = '';
+            if (bambergAvgTemp !== null) {
+                const diff = temp - bambergAvgTemp;
+                if (Math.abs(diff) < 0.3) note = 'About the same as the city average';
+                else if (diff < 0) note = `${Math.abs(diff).toFixed(1)}° cooler than the city average`;
+                else note = `${diff.toFixed(1)}° warmer than the city average`;
+            }
+            tempBlock = `
+                <div class="live-temp">
+                    <span class="live-temp-value">${temp.toFixed(1)}°C</span>
+                    <span class="live-temp-caption">now at this park</span>
+                </div>
+                ${note ? `<div class="live-note">${note}</div>` : ''}`;
+        }
+
+        const rainBlock = `
+            <div class="live-rain ${wet ? 'wet' : 'dry'}">
+                <span class="live-rain-icon">${wet ? '🌧️' : '☀️'}</span>
+                <span><strong>${rain.toFixed(1)} mm</strong> now · <strong>${prob}%</strong> chance this hour — ${wet ? 'bring an umbrella' : 'looks dry'}</span>
+            </div>`;
+
+        el.innerHTML = tempBlock + rainBlock;
     });
 }
 
-function renderPOIs(poi) {
+function renderPOIs(poi, radius) {
     const el = document.getElementById('dp-poi');
     if (!el) return;
+    const radiusUsed = poi._radiusUsed || radius;
     let html = '';
     for (const [cat, items] of Object.entries(poi)) {
-        if (!items.length) continue;
+        if (cat.startsWith('_') || !items.length) continue;
         const color = POI_COLORS[cat];
         if (cat === 'transit') {
             html += `<div class="detail-poi-category"><div class="detail-poi-cat-name">${poiIcon('transit')} Public transport</div>`;
             items.forEach(item => {
-                // combined stop: lines + how many platforms (directions)
                 const linesHtml = item.lines && item.lines.length
                     ? `<div class="transit-lines">Lines: ${item.lines.map(l => `<span class="bus-line">${l}</span>`).join(' ')}</div>`
                     : `<div class="transit-lines transit-lines-none">No line info on OpenStreetMap</div>`;
@@ -108,5 +135,12 @@ function renderPOIs(poi) {
             }).join('')}</div>`;
         }
     }
-    el.innerHTML = html || '<p class="poi-loading">No points of interest found within 400 m.</p>';
+    if (!html) {
+        el.innerHTML = `<p class="poi-loading">No selected points of interest found within ${(radiusUsed/1000).toFixed(1)} km.</p>`;
+        return;
+    }
+    const note = radiusUsed > radius
+        ? `<p class="poi-radius-note">Nearest selected places (widened to ${radiusUsed} m to find some).</p>`
+        : `<p class="poi-radius-note">Within ${radiusUsed} m.</p>`;
+    el.innerHTML = note + html;
 }

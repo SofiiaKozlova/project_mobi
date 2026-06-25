@@ -98,9 +98,39 @@ function conditionFactLabel(park, key) {
 }
 
 /* ============================================================
-   POI FETCH — one batch Overpass call for ALL parks
+   POI FETCH — Overpass (OpenStreetMap)
    ============================================================ */
-const OSM_RADIUS = 400; // metres around park centre
+const POI_CATEGORIES = ['transit', 'food', 'icecream', 'sightseeing', 'playground'];
+
+// Overpass node selectors per category
+const POI_SELECTORS = {
+    transit:     ['["highway"="bus_stop"]', '["public_transport"="platform"]'],
+    food:        ['["amenity"~"restaurant|cafe|biergarten"]'],
+    icecream:    ['["amenity"="ice_cream"]', '["shop"="ice_cream"]'],
+    sightseeing: ['["tourism"~"attraction|museum|viewpoint"]', '["historic"]'],
+    playground:  ['["leisure"="playground"]']
+};
+
+/* ─── Shared POI preferences (persist across pages via localStorage) ─── */
+const POI_RADIUS_DEFAULT = 400;
+function getPoiRadius() {
+    const v = parseInt(localStorage.getItem('cp_poi_radius'), 10);
+    return Number.isFinite(v) ? v : POI_RADIUS_DEFAULT;
+}
+function setPoiRadius(m) { localStorage.setItem('cp_poi_radius', String(m)); }
+
+function getPoiCategories() {
+    try {
+        const v = JSON.parse(localStorage.getItem('cp_poi_categories'));
+        if (Array.isArray(v)) return v.filter(c => POI_CATEGORIES.includes(c));
+    } catch (e) { /* ignore */ }
+    return [...POI_CATEGORIES];           // default: all selected
+}
+function setPoiCategories(arr) {
+    localStorage.setItem('cp_poi_categories', JSON.stringify(arr));
+}
+
+let OSM_RADIUS = getPoiRadius();          // batch radius (Explore page)
 
 function buildBatchOverpassQuery() {
     const cats = [
@@ -256,6 +286,69 @@ function fetchPOIs(park) {
     return fetchAllPOIs().then(() => poiCache[park.id] || blank);
 }
 
+/* Change the Explore batch radius and force a refetch on next call. */
+function setBatchRadius(metres) {
+    OSM_RADIUS = metres;
+    setPoiRadius(metres);
+    allPoisLoaded = false;
+    _poiFetchPromise = null;
+    for (const k of Object.keys(poiCache)) delete poiCache[k];
+}
+
+/* ─── Per-park POI fetch (detail page) ───
+   Queries ONLY the requested categories around one park, and keeps
+   widening the radius (×1.6 each step, up to ~3 km) until at least one
+   POI is found — so a park never shows an empty list. */
+async function fetchPOIsForPark(park, { categories, radius } = {}) {
+    categories = (categories && categories.length) ? categories : [...POI_CATEGORIES];
+    let r = radius || getPoiRadius();
+    const MAX_R = 3200;
+    const blank = () => { const o = {}; categories.forEach(c => o[c] = []); return o; };
+
+    while (true) {
+        const result = await _fetchParkOnce(park, categories, r);
+        const total = Object.values(result).reduce((s, a) => s + a.length, 0);
+        if (total > 0 || r >= MAX_R) {
+            result._radiusUsed = r;
+            return result;
+        }
+        r = Math.min(MAX_R, Math.round(r * 1.6));
+    }
+}
+
+async function _fetchParkOnce(park, categories, radius) {
+    const out = {}; categories.forEach(c => out[c] = []);
+    const selectors = [];
+    categories.forEach(cat => (POI_SELECTORS[cat] || []).forEach(sel =>
+        selectors.push(`node${sel}(around:${radius},${park.lat},${park.lon})`)));
+    const q = `[out:json][timeout:30];(${selectors.join(';')};);out body;`;
+    try {
+        const resp = await fetch('https://overpass-api.de/api/interpreter', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'data=' + encodeURIComponent(q)
+        });
+        const data = await resp.json();
+        (data.elements || []).forEach(node => {
+            const cat = classifyNode(node);
+            if (!cat || !categories.includes(cat)) return;
+            const d = haversine(park.lat, park.lon, node.lat, node.lon);
+            if (d > radius) return;
+            const entry = { name: nodeName(node), dist: distLabel(Math.round(d)), _dist: d, lat: node.lat, lon: node.lon };
+            if (cat === 'transit') { entry.lines = busLines(node); entry.rawName = (node.tags && node.tags.name) || ''; }
+            out[cat].push(entry);
+        });
+        categories.forEach(cat => {
+            out[cat].sort((a, b) => a._dist - b._dist);
+            if (cat === 'transit') out[cat] = combineTransitStops(out[cat]);
+            out[cat] = out[cat].slice(0, 3).map(({ _dist, ...rest }) => rest);
+        });
+    } catch (e) {
+        console.warn('Per-park POI fetch failed:', e);
+    }
+    return out;
+}
+
 /* ============================================================
    LIVE TEMPERATURE  (Netatmo via backend → Open-Meteo fallback)
    ============================================================ */
@@ -336,6 +429,8 @@ async function fetchRain(lat, lon) {
    AUTOMATED QUIETNESS  (road proximity → 1-10)
    ============================================================ */
 async function computeQuietness() {
+    // If the OSM cache already provides Quiet, don't override it client-side.
+    if (PARKS.some(p => (p.data_source || {}).quiet === 'osm')) return;
     try {
         const q = `[out:json][timeout:15];way["highway"~"^(motorway|motorway_link|trunk|trunk_link|primary|secondary)$"](49.83,10.78,49.96,10.99);out geom;`;
         const data = await (await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(q)}`)).json();
