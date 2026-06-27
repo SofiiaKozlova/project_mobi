@@ -142,5 +142,27 @@ function renderPOIs(poi, radius) {
     const note = radiusUsed > radius
         ? `<p class="poi-radius-note">Nearest selected places (widened to ${radiusUsed} m to find some).</p>`
         : `<p class="poi-radius-note">Within ${radiusUsed} m.</p>`;
-    el.innerHTML = note + html;
+    el.innerHTML = note + html
+    ;
+    
 }
+document.addEventListener("DOMContentLoaded", () => {
+
+const btn = document.getElementById("toggle-feedback");
+const list = document.getElementById("feedback-list");
+
+if (!btn || !list) return;
+
+btn.addEventListener("click", () => {
+
+    if (list.style.display === "none") {
+        list.style.display = "block";
+        btn.textContent = "Hide feedback";
+    } else {
+        list.style.display = "none";
+        btn.textContent = "Show feedback";
+    }
+
+});
+
+});

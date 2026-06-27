@@ -12,3 +12,39 @@
 .feedback-link:hover {
     text-decoration: underline;
 }
+.feedback-card {
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 15px;
+    border: 1px solid #e5e5e5;
+}
+
+
+.feedback-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+
+.feedback-name {
+    font-size: 17px;
+}
+
+
+.feedback-rating {
+    font-size: 18px;
+}
+
+
+.feedback-text {
+    margin: 12px 0;
+    font-size: 15px;
+}
+
+
+.feedback-date {
+    color: #888;
+    font-size: 12px;
+}

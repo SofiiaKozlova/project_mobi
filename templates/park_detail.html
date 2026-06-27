@@ -47,6 +47,54 @@
     <div class="detail-section feedback-section">
         <a href="{{ url_for('feedback', park=park.id) }}" class="feedback-link">Leave feedback or a comment</a>
     </div>
+
+
+
+
+
+
+
+
+<button id="toggle-feedback" class="date-btn">
+    Show feedback
+</button>
+
+<div id="feedback-list" style="display:none; margin-top:20px;">
+
+    {% if feedbacks %}
+        {% for item in feedbacks %}
+
+        <div class="feedback-card">
+
+            <div class="feedback-header">
+                <strong class="feedback-name">
+                    {{ item.name }}
+                </strong>
+
+                <span class="feedback-rating">
+                    {% for i in range(item.rating|int) %}
+                        ⭐
+                    {% endfor %}
+                </span>
+            </div>
+
+            <p class="feedback-text">
+                {{ item.feedback }}
+            </p>
+
+            <small class="feedback-date">
+                {{ item.timestamp[:10].replace("-", ".") }} {{ item.timestamp[11:16] }}
+            </small>
+
+        </div>
+
+        {% endfor %}
+
+    {% else %}
+        <p>No feedback yet.</p>
+    {% endif %}
+
+</div>
 </div>
 {% endblock %}
 

@@ -75,15 +75,31 @@ def planner():
 def reminders():
     return render_template("reminders.html", active="reminders")
 
-
 @app.route("/park/<park_id>")
 def park_detail(park_id):
     parks = load_parks()
     park = next((p for p in parks if p["id"] == park_id), None)
+
     if not park:
         return render_template("park_not_found.html", park_id=park_id), 404
-    return render_template("park_detail.html", park=park, active="explore")
 
+    feedback_file = os.path.join(FEEDBACK_DIR, f"{park_id}.json")
+
+    if os.path.exists(feedback_file):
+        with open(feedback_file, "r", encoding="utf-8") as f:
+            try:
+                feedbacks = json.load(f)
+            except json.JSONDecodeError:
+                feedbacks = []
+    else:
+        feedbacks = []
+
+    return render_template(
+        "park_detail.html",
+        park=park,
+        feedbacks=feedbacks,
+        active="explore"
+    )
 
 # ── Profile / auth (/register, /login, /logout, /profile) live in auth.py ──
 
