@@ -369,6 +369,19 @@ def main():
         json.dump(cache, f, ensure_ascii=False, indent=2)
     print(f"\nWrote {CACHE_FILE} ({len(cache)} parks).")
 
+    # Pre-build the POI cache too, so the first page load is instant.
+    try:
+        from osm_pois import build_all
+        from park_data import load_parks as _load_merged
+        print("\nFetching nearby points of interest (this warms the POI cache)…")
+        pois = build_all(_load_merged(merged=True))
+        pois_path = os.path.join("data", "park_pois.json")
+        with open(pois_path, "w", encoding="utf-8") as f:
+            json.dump(pois, f, ensure_ascii=False)
+        print(f"Wrote {pois_path} ({len(pois)} parks).")
+    except Exception as e:
+        print(f"POI cache step skipped ({e}). The app will build it on first load instead.")
+
 
 if __name__ == "__main__":
     main()

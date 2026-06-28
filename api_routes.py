@@ -304,3 +304,72 @@ def parks():
         return jsonify(load_parks(merged=True))
     except Exception as e:
         return jsonify(error=f'could not load parks: {e}'), 500
+
+# ────────────────────────────────────────────
+# POIs — nearby points of interest, cached on disk
+# Built once (server-side, with a proper User-Agent so no 406) and then
+# served instantly. The browser filters by distance/category, so the
+# distance slider is immediate and a larger radius reliably shows MORE.
+# ────────────────────────────────────────────
+import json as _json2
+import os as _os
+import threading
+import time as _time
+
+_POIS_CACHE_PATH = _os.path.join('data', 'park_pois.json')
+_POIS_MAX_AGE = 7 * 24 * 3600          # rebuild if older than a week
+_pois_lock = threading.Lock()
+_pois_building = {'state': False}
+
+
+def _pois_fresh():
+    try:
+        age = _time.time() - _os.path.getmtime(_POIS_CACHE_PATH)
+        with open(_POIS_CACHE_PATH, 'r', encoding='utf-8') as f:
+            data = _json2.load(f)
+        if data and age < _POIS_MAX_AGE:
+            return data
+    except (FileNotFoundError, _json2.JSONDecodeError, OSError):
+        pass
+    return None
+
+
+def _build_pois():
+    from park_data import load_parks
+    from osm_pois import build_all
+    parks = load_parks(merged=True)
+    data = build_all(parks)
+    total = sum(len(v) for cats in data.values() for v in cats.values())
+    if total == 0:
+        # Build produced nothing (Overpass unreachable?) — don't cache an empty
+        # result; let it retry on a later request.
+        return data, False
+    try:
+        _os.makedirs('data', exist_ok=True)
+        with open(_POIS_CACHE_PATH, 'w', encoding='utf-8') as f:
+            _json2.dump(data, f, ensure_ascii=False)
+    except OSError as e:
+        print(f'[pois] could not write cache: {e}')
+    return data, True
+
+
+@api_bp.route('/api/pois')
+def pois():
+    """Serve cached POIs; build them on first request if missing/stale."""
+    cached = _pois_fresh()
+    if cached is not None:
+        return jsonify(ready=True, pois=cached)
+
+    # No fresh cache. Build once, guarded by a lock so concurrent page loads
+    # don't all trigger a build. While a build runs, tell the client to fall
+    # back to its own live fetch for this session.
+    if _pois_lock.acquire(blocking=False):
+        try:
+            data, ok = _build_pois()
+            return jsonify(ready=ok, pois=(data if ok else {}))
+        except Exception as e:
+            return jsonify(ready=False, error=str(e), pois={}), 200
+        finally:
+            _pois_lock.release()
+    else:
+        return jsonify(ready=False, building=True, pois={}), 200

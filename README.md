@@ -248,3 +248,33 @@ python send_daily_emails.py
 ```
 Make sure your profile has **"Send me a daily reminder"** ticked and at least one
 reminder type enabled.
+
+---
+
+## Update — faster loading + fixed distance slider
+
+**Why it was slow / why the slider broke at large radius.** POIs were fetched
+*live* from Overpass on every page load as one giant query (all parks × all
+categories). At 200 m that query is small and works; at 1000 m it got too big
+and timed out, so nothing showed — which looked like "the slider hides POIs at
+1000 m". The city-wide Quiet road query also ran live on every load.
+
+**The fix — POIs are now cached.** `osm_pois.py` fetches each park's nearby
+places once (server-side, generous 2 km radius, with a proper User-Agent so no
+406) and the app stores them in `data/park_pois.json`, served at `/api/pois`.
+The browser then **filters that cache by the slider distance and your selected
+categories** — so the slider is instant and a larger radius reliably shows
+*more* places, not fewer.
+
+- The cache builds **automatically** on first page load (one-time, ~15 s while
+  the POI badges say "loading"), then every load is instant for a week.
+- To skip even that first wait, run `python fetch_osm_data.py` — it now also
+  pre-builds the POI cache (and the geometry/conditions cache).
+- If the server cache isn't ready yet, the browser falls back to fetching POIs
+  itself for that one session.
+
+**Biggest speed tip:** run `python fetch_osm_data.py` once. That populates
+`park_geo.json` (coords, area, benches, shade, quiet) *and* `park_pois.json`, so
+the app stops doing any live Overpass work on load. Your `park_geo.json` is
+currently empty `{}`, which means nothing is cached yet — that's the main reason
+it still feels slow.

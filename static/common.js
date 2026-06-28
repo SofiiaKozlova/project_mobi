@@ -130,78 +130,84 @@ function setPoiCategories(arr) {
     localStorage.setItem('cp_poi_categories', JSON.stringify(arr));
 }
 
-let OSM_RADIUS = getPoiRadius();          // batch radius (Explore page)
+let OSM_RADIUS = getPoiRadius();          // current slider radius (metres)
+const POI_CACHE_RADIUS = 2000;            // server cache + slider max
 
-function buildBatchOverpassQuery() {
-    const cats = [
-        '["highway"="bus_stop"]',
-        '["public_transport"="platform"]',
+/* ─── Cached POIs ───
+   POIs are fetched ONCE (server cache at /api/pois, generous radius) and then
+   filtered in the browser by the slider + selected categories. That makes the
+   slider instant and a larger radius show MORE places, not fewer. */
+let cpPois = null;                        // { parkId: { cat: [ {name,lat,lon,dist_m,...} ] } }
+let _poisPromise = null;
+
+function loadPois() {
+    if (cpPois) return Promise.resolve(cpPois);
+    if (_poisPromise) return _poisPromise;
+    _poisPromise = fetch('/api/pois')
+        .then(r => r.json())
+        .then(async data => {
+            if (data && data.pois && Object.keys(data.pois).length) cpPois = data.pois;
+            else cpPois = await buildClientPoiCache();   // server cache not ready → live fallback
+            allPoisLoaded = true;
+            document.dispatchEvent(new CustomEvent('pois-loaded'));
+            return cpPois;
+        })
+        .catch(async () => {
+            cpPois = await buildClientPoiCache();
+            allPoisLoaded = true;
+            document.dispatchEvent(new CustomEvent('pois-loaded'));
+            return cpPois;
+        });
+    return _poisPromise;
+}
+
+// Back-compat name used by explore.js
+function fetchAllPOIs() { return loadPois(); }
+
+/* Build a POI cache in the browser as a fallback (one query per park, in
+   parallel, at the max radius) — used only if the server cache isn't ready. */
+async function buildClientPoiCache() {
+    const cache = {};
+    await Promise.all(PARKS.map(async p => { cache[p.id] = await fetchParkPoisLive(p, POI_CACHE_RADIUS); }));
+    return cache;
+}
+
+async function fetchParkPoisLive(park, radius) {
+    const blank = { transit: [], food: [], icecream: [], sightseeing: [], playground: [] };
+    const selectors = [
+        '["highway"="bus_stop"]', '["public_transport"="platform"]',
         '["amenity"~"restaurant|cafe|biergarten"]',
-        '["amenity"="ice_cream"]',
-        '["shop"="ice_cream"]',
-        '["tourism"~"attraction|museum|viewpoint"]',
-        '["historic"]',
+        '["amenity"="ice_cream"]', '["shop"="ice_cream"]',
+        '["tourism"~"attraction|museum|viewpoint"]', '["historic"]',
         '["leisure"="playground"]'
-    ];
-    const stmts = [];
-    for (const c of cats) {
-        for (const p of PARKS) {
-            stmts.push(`node${c}(around:${OSM_RADIUS},${p.lat},${p.lon})`);
-        }
-    }
-    return `[out:json][timeout:30];(${stmts.join(';')};);out body;`;
-}
-
-function fetchAllPOIs() {
-    if (allPoisLoaded) return Promise.resolve();
-    if (_poiFetchPromise) return _poiFetchPromise;
-    _poiFetchPromise = _doFetchAllPOIs();
-    return _poiFetchPromise;
-}
-
-async function _doFetchAllPOIs() {
-    const blank = () => ({ transit: [], food: [], icecream: [], sightseeing: [], playground: [] });
+    ].map(s => `node${s}(around:${radius},${park.lat},${park.lon})`).join(';');
+    const q = `[out:json][timeout:60];(${selectors};);out body;`;
     try {
-        const q = buildBatchOverpassQuery();
         const resp = await fetch('https://overpass-api.de/api/interpreter', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: 'data=' + encodeURIComponent(q)
         });
         const data = await resp.json();
-
-        PARKS.forEach(p => { if (!poiCache[p.id]) poiCache[p.id] = blank(); });
-
+        const cats = { transit: [], food: [], icecream: [], sightseeing: [], playground: [] };
         (data.elements || []).forEach(node => {
             const cat = classifyNode(node);
             if (!cat) return;
-            let bestPark = null, bestDist = Infinity;
-            PARKS.forEach(p => {
-                const d = haversine(p.lat, p.lon, node.lat, node.lon);
-                if (d < bestDist && d <= OSM_RADIUS) { bestDist = d; bestPark = p; }
-            });
-            if (!bestPark) return;
-            const entry = { name: nodeName(node), dist: distLabel(Math.round(bestDist)), _dist: bestDist, lat: node.lat, lon: node.lon };
-            if (cat === 'transit') { entry.lines = busLines(node); entry.rawName = (node.tags && node.tags.name) || ''; }
-            poiCache[bestPark.id][cat].push(entry);
+            const d = haversine(park.lat, park.lon, node.lat, node.lon);
+            if (d > radius) return;
+            const item = { name: nodeName(node), lat: node.lat, lon: node.lon, dist_m: Math.round(d) };
+            if (cat === 'transit') { item.lines = busLines(node); item.rawName = (node.tags && node.tags.name) || ''; }
+            cats[cat].push(item);
         });
-
-        // Sort, COMBINE transit stops by name, cap at 3 per category
-        PARKS.forEach(p => {
-            const cache = poiCache[p.id];
-            Object.keys(cache).forEach(cat => {
-                cache[cat].sort((a, b) => a._dist - b._dist);
-                if (cat === 'transit') cache[cat] = combineTransitStops(cache[cat]);
-                cache[cat] = cache[cat].slice(0, 3).map(({ _dist, ...rest }) => rest);
-            });
+        Object.keys(cats).forEach(c => {
+            cats[c].sort((a, b) => a.dist_m - b.dist_m);
+            if (c === 'transit') cats[c] = combineCachedTransit(cats[c]);
+            cats[c] = cats[c].slice(0, 20);
         });
-
-        allPoisLoaded = true;
-        console.log(`POIs loaded: ${(data.elements || []).length} nodes`);
+        return cats;
     } catch (e) {
-        console.warn('Batch POI fetch failed:', e);
-        PARKS.forEach(p => { if (!poiCache[p.id]) poiCache[p.id] = blank(); });
-        allPoisLoaded = true;
+        console.warn('Live POI fetch failed for', park.id, e);
+        return blank;
     }
 }
 
@@ -280,72 +286,63 @@ function gmapsPoiUrl(name, lat, lon) {
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
 }
 
-function fetchPOIs(park) {
-    const blank = { transit: [], food: [], icecream: [], sightseeing: [], playground: [] };
-    if (allPoisLoaded) return Promise.resolve(poiCache[park.id] || blank);
-    return fetchAllPOIs().then(() => poiCache[park.id] || blank);
-}
-
-/* Change the Explore batch radius and force a refetch on next call. */
-function setBatchRadius(metres) {
-    OSM_RADIUS = metres;
-    setPoiRadius(metres);
-    allPoisLoaded = false;
-    _poiFetchPromise = null;
-    for (const k of Object.keys(poiCache)) delete poiCache[k];
-}
-
-/* ─── Per-park POI fetch (detail page) ───
-   Queries ONLY the requested categories around one park, and keeps
-   widening the radius (×1.6 each step, up to ~3 km) until at least one
-   POI is found — so a park never shows an empty list. */
-async function fetchPOIsForPark(park, { categories, radius } = {}) {
+/* ─── Filter cached POIs for one park ───
+   Returns { cat: [up to 3 nearest within `radius`, each with a `dist` label] }.
+   If `expand` and a selected category has nothing within `radius`, its nearest
+   cached items are shown instead, so a detail page is never empty. */
+function filterParkPois(parkId, { categories, radius, expand = true } = {}) {
     categories = (categories && categories.length) ? categories : [...POI_CATEGORIES];
-    let r = radius || getPoiRadius();
-    const MAX_R = 3200;
-    const blank = () => { const o = {}; categories.forEach(c => o[c] = []); return o; };
-
-    while (true) {
-        const result = await _fetchParkOnce(park, categories, r);
-        const total = Object.values(result).reduce((s, a) => s + a.length, 0);
-        if (total > 0 || r >= MAX_R) {
-            result._radiusUsed = r;
-            return result;
+    const src = (cpPois && cpPois[parkId]) || {};
+    const out = {};
+    let radiusUsed = radius;
+    categories.forEach(cat => {
+        const all = (src[cat] || []).slice().sort((a, b) => a.dist_m - b.dist_m);
+        let within = all.filter(i => i.dist_m <= radius);
+        if (!within.length && expand && all.length) {
+            within = all.slice(0, 3);
+            radiusUsed = Math.max(radiusUsed, within[within.length - 1].dist_m);
         }
-        r = Math.min(MAX_R, Math.round(r * 1.6));
-    }
+        out[cat] = within.slice(0, 3).map(i => ({ ...i, dist: distLabel(i.dist_m) }));
+    });
+    out._radiusUsed = radiusUsed;
+    return out;
 }
 
-async function _fetchParkOnce(park, categories, radius) {
-    const out = {}; categories.forEach(c => out[c] = []);
-    const selectors = [];
-    categories.forEach(cat => (POI_SELECTORS[cat] || []).forEach(sel =>
-        selectors.push(`node${sel}(around:${radius},${park.lat},${park.lon})`)));
-    const q = `[out:json][timeout:30];(${selectors.join(';')};);out body;`;
-    try {
-        const resp = await fetch('https://overpass-api.de/api/interpreter', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: 'data=' + encodeURIComponent(q)
-        });
-        const data = await resp.json();
-        (data.elements || []).forEach(node => {
-            const cat = classifyNode(node);
-            if (!cat || !categories.includes(cat)) return;
-            const d = haversine(park.lat, park.lon, node.lat, node.lon);
-            if (d > radius) return;
-            const entry = { name: nodeName(node), dist: distLabel(Math.round(d)), _dist: d, lat: node.lat, lon: node.lon };
-            if (cat === 'transit') { entry.lines = busLines(node); entry.rawName = (node.tags && node.tags.name) || ''; }
-            out[cat].push(entry);
-        });
-        categories.forEach(cat => {
-            out[cat].sort((a, b) => a._dist - b._dist);
-            if (cat === 'transit') out[cat] = combineTransitStops(out[cat]);
-            out[cat] = out[cat].slice(0, 3).map(({ _dist, ...rest }) => rest);
-        });
-    } catch (e) {
-        console.warn('Per-park POI fetch failed:', e);
+/* Count of cached POIs in a category within a radius (for Explore badges). */
+function countParkPois(parkId, cat, radius) {
+    const src = (cpPois && cpPois[parkId]) || {};
+    return (src[cat] || []).filter(i => i.dist_m <= radius).length;
+}
+
+/* Explore badges: ensure POIs loaded, return all categories within current radius. */
+function fetchPOIs(park) {
+    return loadPois().then(() => filterParkPois(park.id, { categories: [...POI_CATEGORIES], radius: getPoiRadius(), expand: false }));
+}
+
+/* Detail page: only selected categories, expanding until at least one. */
+function fetchPOIsForPark(park, { categories, radius } = {}) {
+    return loadPois().then(() => filterParkPois(park.id, { categories, radius, expand: true }));
+}
+
+/* Slider changed — just persist; filtering is client-side, no refetch. */
+function setBatchRadius(metres) { OSM_RADIUS = metres; setPoiRadius(metres); }
+
+/* Combine cached transit items (dist_m based) sharing a name. */
+function combineCachedTransit(stops) {
+    const groups = new Map();
+    for (const s of stops) {
+        const key = (s.rawName || s.name || '').trim().toLowerCase() || `__${s.lat},${s.lon}`;
+        if (!groups.has(key)) groups.set(key, { ...s, lines: [...(s.lines || [])], platforms: 1 });
+        else {
+            const g = groups.get(key);
+            g.platforms += 1;
+            (s.lines || []).forEach(l => { if (!g.lines.includes(l)) g.lines.push(l); });
+            if (s.dist_m < g.dist_m) { g.dist_m = s.dist_m; g.lat = s.lat; g.lon = s.lon; }
+        }
     }
+    const out = [...groups.values()];
+    out.forEach(g => g.lines.sort((a, b) => { const na = parseInt(a, 10), nb = parseInt(b, 10); if (!isNaN(na) && !isNaN(nb) && na !== nb) return na - nb; return String(a).localeCompare(String(b)); }));
+    out.sort((a, b) => a.dist_m - b.dist_m);
     return out;
 }
 
