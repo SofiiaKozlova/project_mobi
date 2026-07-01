@@ -278,3 +278,90 @@ categories** — so the slider is instant and a larger radius reliably shows
 the app stops doing any live Overpass work on load. Your `park_geo.json` is
 currently empty `{}`, which means nothing is cached yet — that's the main reason
 it still feels slow.
+
+---
+
+## Update — accurate Shade (NDVI) + much better park matching
+
+**Re-run `python fetch_osm_data.py`** to pick up these fixes — your previous
+`park_geo.json`/`park_pois.json` were built before them and have been reset.
+
+**Shade now comes from satellite NDVI, not OSM trees.** OpenStreetMap doesn't
+map the individual trees inside most parks, so the old tree-count heuristic
+scored the tree-filled Hain as 1/10. Shade now uses Sentinel-2 NDVI (peak summer,
+leaf-on) via Copernicus — the "vegetation coverage (API)" approach. `ndvi_shade.py`
+uses the Statistical API (clean JSON, no fragile GeoTIFF parsing). If Copernicus
+is unreachable for a park, that park keeps its hand-set seed Shade rather than a
+wrong value, and the script prints which it used.
+
+**Polygon matching is much stricter, fixing the bad results you saw:**
+- **No two parks share a polygon** — Domplatz no longer grabs the Rosengarten
+  shape; it keeps its seed location instead.
+- **Tiny/degenerate matches are rejected** — the 0.0–0.1 ha "matches" for
+  Volkspark, Leinritt, Stephansberg and Am Kranen are dropped; those parks keep
+  their seed coordinates and area.
+- **Name matches win, and the largest one is chosen** — e.g. the Hain now prefers
+  the larger Luitpoldhain polygon over the small Theresienhain.
+- **Non-polygon parks still get real data** — even when a park has no trustworthy
+  polygon (a promenade or towpath), Quiet (road distance) and Shade (NDVI) are
+  still computed from its centre; only coordinates/area/benches stay as seeds.
+
+After re-running, skim `data/park_geo.json`: a park with no `lat`/`osm_id` was
+left on its seed values (expected for squares/promenades). If a real park you
+care about was left unmatched, nudge its `lat`/`lon` in `data/parks.json` toward
+the park centre and re-run just that one, e.g. `python fetch_osm_data.py volkspark`.
+
+---
+
+## Update — correct park locations (geocoding) + condition info bubble
+
+**Re-run `python fetch_osm_data.py`** to fix the locations. The old caches held
+the wrong matches and have been reset.
+
+**Why locations were wrong, and the fix:**
+- The Hain had matched **"Luisenhain"** — a *different* park 570 m away — because
+  the name matcher treated the common German suffix "…hain" as a match and then
+  preferred the largest one. Matching is now **containment-dominant**: a polygon
+  that actually contains the park's point beats any far-away name match, so a
+  wrong "…hain" can't win.
+- Several parks were sitting on **hand-typed seed coordinates** that were off.
+  The script now **geocodes each park by name via Nominatim** (OpenStreetMap's
+  search) to get an authoritative location, disambiguating by the nearest result
+  and rejecting anything more than 3 km away. That geocoded point is used both to
+  search for the polygon and as the pin when a park has no clean polygon (a
+  square, promenade or towpath).
+
+So after re-running, pins land on the real parks. Nominatim is rate-limited to
+~1 request/second, so the run is a little slower — that's expected.
+
+**Condition info bubble.** The "Park conditions" heading (on Explore and on each
+park page) now has an **ⓘ** button that explains what Shade, Quiet, Benches and
+Park size mean and where each number comes from.
+
+If a specific park still lands in the wrong spot after re-running, its Nominatim
+result was probably ambiguous — set that park's `lat`/`lon` in `data/parks.json`
+to the correct point and re-run just that id (`python fetch_osm_data.py hain`);
+the seed is used to disambiguate the geocoder.
+
+---
+
+## Update — geocoding fix (403) + dark mode
+
+**Nominatim 403 fixed.** Nominatim's public server blocked the automated
+requests (403 Forbidden), so every park fell back to its seed. Geocoding now
+uses **Photon** (Komoot's OpenStreetMap geocoder, much more permissive), with
+Nominatim only as a fallback. Re-run `python fetch_osm_data.py` and the parks
+that were "no polygon or geocode — keeping seed" (Hain, Rosengarten, Volkspark,
+Domplatz, Jakobsberg, Altenburg, Stephansberg, Am Kranen…) should now resolve to
+real locations and, where a polygon exists, snap to it.
+
+Note: the parks that already matched a polygon last run (ERBA, Michelsberg,
+Hauptsmoor, Seehof) were fine — the 403 only affected the seed-fallback parks.
+Your `park_pois.json` is included so POIs work without waiting; it'll be rebuilt
+with the corrected coordinates next time you run the fetch.
+
+**Dark mode added.** There's a 🌙 / ☀️ toggle in the top-right. It flips a
+`data-theme="dark"` attribute on the page, remembers your choice
+(localStorage), and is applied before first paint so there's no flash. It was
+easy because the design already used CSS variables — dark mode just overrides
+them, plus a filter that darkens the map tiles so the map doesn't glare.

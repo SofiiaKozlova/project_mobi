@@ -28,6 +28,14 @@ import time
 
 import requests
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()          # so COPERNICUS_* (for NDVI shade) are available
+except ImportError:
+    pass
+
+from ndvi_shade import compute_shade
+
 PARKS_FILE = os.path.join("data", "parks.json")
 CACHE_FILE = os.path.join("data", "park_geo.json")
 OVERPASS_ENDPOINTS = [
@@ -35,8 +43,11 @@ OVERPASS_ENDPOINTS = [
     "https://overpass.kumi.systems/api/interpreter",
     "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
 ]
-SEARCH_RADIUS = 700        # metres around the seed point to look for the park polygon
+SEARCH_RADIUS = 700        # metres around the anchor to look for the park polygon
 REQUEST_PAUSE = 2.0        # seconds between Overpass calls (be polite)
+USER_AGENT = "CoolParkBamberg/1.0 (urban-data student project; contact: your-email@example.com)"
+NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
+PHOTON_URL = "https://photon.komoot.io/api/"
 
 # OSM tags that usually mark a park-like green area
 AREA_SELECTORS = [
@@ -136,7 +147,7 @@ def overpass(query):
     Falls back across mirrors if one is busy/blocked.
     """
     headers = {
-        "User-Agent": "CoolParkBamberg/1.0 (urban-data student project; contact: your-email@example.com)",
+        "User-Agent": USER_AGENT,
         "Accept": "application/json",
     }
     last_err = None
@@ -169,9 +180,84 @@ def ring_from_element(el):
     return []
 
 
-def find_polygon(park):
-    """Find the best OSM area feature for a park near its seed coordinate."""
-    lat, lon = park["lat"], park["lon"]
+MIN_AREA_HA = 0.5            # ignore tiny polygons unless the name matches
+NEARBY_BIG_HA = 2.0         # a large nearby park is acceptable without a name match
+
+
+def clean_name(name):
+    """Strip parentheticals and secondary parts for a cleaner geocoder query."""
+    import re
+    n = re.sub(r"\(.*?\)", "", name)      # drop "(Nordpark)"
+    n = n.split("&")[0].split(",")[0]      # drop "& cathedral gardens"
+    return n.strip()
+
+
+def _pick_nearest(points, near_lat, near_lon, max_km=3.0):
+    """From [(lat,lon), ...] choose the one nearest the seed within max_km."""
+    best, best_d = None, float("inf")
+    for la, lo in points:
+        d = haversine(near_lat, near_lon, la, lo)
+        if d < best_d:
+            best_d, best = d, {"lat": round(la, 7), "lon": round(lo, 7)}
+    return best if best and best_d <= max_km * 1000 else None
+
+
+def _geocode_photon(query, near_lat, near_lon):
+    """Photon (Komoot) — OpenStreetMap-based, permissive. Biased toward Bamberg."""
+    resp = requests.get(
+        PHOTON_URL,
+        params={"q": query, "lat": near_lat, "lon": near_lon, "limit": 5, "lang": "de"},
+        headers={"User-Agent": USER_AGENT},
+        timeout=30,
+    )
+    resp.raise_for_status()
+    pts = []
+    for f in resp.json().get("features", []):
+        coords = (f.get("geometry") or {}).get("coordinates")
+        if coords and len(coords) >= 2:
+            pts.append((coords[1], coords[0]))   # GeoJSON is [lon, lat]
+    return _pick_nearest(pts, near_lat, near_lon)
+
+
+def _geocode_nominatim(query, near_lat, near_lon):
+    """Nominatim fallback (stricter usage policy; may 403)."""
+    resp = requests.get(
+        NOMINATIM_URL,
+        params={"q": query + ", Germany", "format": "json", "limit": 5},
+        headers={"User-Agent": USER_AGENT, "Referer": "https://coolpark.bamberg.local"},
+        timeout=30,
+    )
+    resp.raise_for_status()
+    pts = []
+    for r in resp.json():
+        try:
+            pts.append((float(r["lat"]), float(r["lon"])))
+        except (KeyError, ValueError):
+            continue
+    return _pick_nearest(pts, near_lat, near_lon)
+
+
+def geocode(name, near_lat, near_lon):
+    """
+    Resolve a park to authoritative coordinates. Tries Photon first (permissive),
+    then Nominatim. Disambiguates by the result nearest the seed and rejects
+    anything more than 3 km away. Returns {lat, lon} or None.
+    """
+    query = f"{clean_name(name)} Bamberg"
+    for provider in (_geocode_photon, _geocode_nominatim):
+        try:
+            res = provider(query, near_lat, near_lon)
+            if res:
+                return res
+        except (requests.RequestException, ValueError) as e:
+            print(f"    geocode via {provider.__name__} failed: {e}")
+    return None
+
+
+def find_candidates(park, anchor=None):
+    """Return ALL plausible OSM area features near the anchor (or the seed)."""
+    lat = anchor["lat"] if anchor else park["lat"]
+    lon = anchor["lon"] if anchor else park["lon"]
     selectors = "".join(
         f'way{sel}(around:{SEARCH_RADIUS},{lat},{lon});'
         f'relation{sel}(around:{SEARCH_RADIUS},{lat},{lon});'
@@ -180,7 +266,8 @@ def find_polygon(park):
     query = f"[out:json][timeout:60];({selectors});out geom;"
     data = overpass(query)
 
-    candidates = []
+    park_words = [w.lower() for w in park["name"].replace("-", " ").split() if len(w) > 3]
+    out = []
     for el in data.get("elements", []):
         ring = ring_from_element(el)
         if len(ring) < 3:
@@ -189,84 +276,77 @@ def find_polygon(park):
         if area <= 0:
             continue
         centroid = polygon_centroid(ring)
-        contains = point_in_ring(lat, lon, ring)
         name = (el.get("tags") or {}).get("name", "")
-        name_match = bool(name) and any(
-            w.lower() in name.lower() for w in park["name"].replace("-", " ").split() if len(w) > 3
-        )
-        candidates.append({
+        name_match = bool(name) and any(w in name.lower() for w in park_words)
+        out.append({
             "ring": ring, "area_ha": area, "centroid": centroid,
-            "contains": contains, "name": name, "name_match": name_match,
+            "contains": point_in_ring(lat, lon, ring),
+            "name": name, "name_match": name_match,
             "dist": haversine(lat, lon, centroid["lat"], centroid["lon"]),
             "osm_type": el["type"], "osm_id": el["id"],
         })
-
-    if not candidates:
-        return None
-
-    # Prefer: contains the seed point → name match → nearest centroid.
-    candidates.sort(key=lambda c: (not c["contains"], not c["name_match"], c["dist"]))
-    return candidates[0]
+    return out
 
 
-def fetch_inside(ring, area_ha):
-    """
-    One query for everything inside the polygon:
-      • amenity=bench  → bench_count (the Benches fact)
-      • natural=tree   → individual trees (for canopy density)
-      • natural=wood / landuse=forest → woodland areas (for canopy fraction)
-    Returns (bench_count, shade_score) where shade_score is 1-10.
-    """
+def score_candidate(c):
+    """Higher = more likely the correct park. Containment dominates; a far-away
+    name match (e.g. a different '…hain') can't outweigh the park that actually
+    contains the point."""
+    s = 0.0
+    if c["contains"]:
+        s += 100
+    if c["name_match"]:
+        s += 40
+    s -= c["dist"] / 10.0          # 100 m away costs 10 points
+    s += min(8.0, c["area_ha"])    # mild preference for the whole park over a sub-feature
+    return s
+
+
+def is_acceptable(c):
+    """Whether a candidate is trustworthy enough to override the seed values."""
+    if c["contains"] and c["area_ha"] >= 0.2:
+        return True
+    if c["name_match"] and c["dist"] < 150 and c["area_ha"] >= 0.2:
+        return True
+    if c["area_ha"] >= 3.0 and c["dist"] < 150:
+        return True
+    return False
+
+
+def assign_polygons(parks, cand_by_pid):
+    """Global greedy assignment by score, so the best (park, polygon) pairings
+    win first and no two parks share the same OSM feature."""
+    pairs = []
+    for park in parks:
+        for c in cand_by_pid.get(park["id"], []):
+            if is_acceptable(c):
+                pairs.append((score_candidate(c), park["id"], c))
+    pairs.sort(key=lambda x: x[0], reverse=True)
+    used, assigned = set(), {}
+    for _score, pid, c in pairs:
+        if pid in assigned or c["osm_id"] in used:
+            continue
+        assigned[pid] = c
+        used.add(c["osm_id"])
+    return assigned
+
+
+def fetch_benches(ring):
+    """Count amenity=bench nodes inside the polygon."""
     poly = " ".join(f'{p["lat"]} {p["lon"]}' for p in ring)
-    query = (
-        f'[out:json][timeout:90];('
-        f'node["amenity"="bench"](poly:"{poly}");'
-        f'node["natural"="tree"](poly:"{poly}");'
-        f'way["natural"="wood"](poly:"{poly}");'
-        f'way["landuse"="forest"](poly:"{poly}");'
-        f'way["natural"="scrub"](poly:"{poly}");'
-        f');out geom;'
-    )
+    query = f'[out:json][timeout:60];node["amenity"="bench"](poly:"{poly}");out count;'
     try:
         data = overpass(query)
+        for el in data.get("elements", []):
+            tags = el.get("tags", {})
+            if "total" in tags:
+                return int(tags["total"])
+            if "nodes" in tags:
+                return int(tags["nodes"])
+        return 0
     except Exception as e:
-        print(f"    inside-polygon query failed: {e}")
-        return None, None
-
-    bench_count = 0
-    tree_count = 0
-    wood_area = 0.0
-    for el in data.get("elements", []):
-        tags = el.get("tags", {})
-        if el["type"] == "node" and tags.get("amenity") == "bench":
-            bench_count += 1
-        elif el["type"] == "node" and tags.get("natural") == "tree":
-            tree_count += 1
-        elif el["type"] == "way" and (tags.get("natural") in ("wood", "scrub") or tags.get("landuse") == "forest"):
-            r = ring_from_element(el)
-            if len(r) >= 3:
-                wood_area += polygon_area_ha(r)
-
-    shade_score = estimate_shade(area_ha, tree_count, wood_area)
-    return bench_count, shade_score
-
-
-def estimate_shade(area_ha, tree_count, wood_area_ha):
-    """
-    Combine two canopy signals into a 1-10 Shade score:
-      • woodland fraction — area of wood/forest inside the park ÷ park area
-        (works for forests where individual trees aren't mapped)
-      • tree density      — mapped trees per hectare, saturating at ~60/ha
-        (works for ornamental parks where trees are mapped individually)
-    We take the stronger of the two signals.
-    """
-    if not area_ha or area_ha <= 0:
+        print(f"    bench count failed: {e}")
         return None
-    canopy_fraction = min(1.0, wood_area_ha / area_ha) if wood_area_ha else 0.0
-    density = (tree_count / area_ha) if area_ha else 0.0
-    density_fraction = min(1.0, density / 60.0)
-    combined = max(canopy_fraction, density_fraction)
-    return max(1, min(10, round(1 + 9 * combined)))
 
 
 def estimate_quiet(centroid):
@@ -327,42 +407,77 @@ def main():
         except json.JSONDecodeError:
             cache = {}
 
+    # 1) Geocode each park by name (authoritative location), then fetch
+    #    candidate polygons around that anchor.
+    anchors, cand_by_pid = {}, {}
+    for park in parks:
+        pid = park["id"]
+        anchor = geocode(park["name"], park["lat"], park["lon"])
+        anchors[pid] = anchor
+        if anchor:
+            print(f"  geocoded {pid} → ({anchor['lat']}, {anchor['lon']})")
+        time.sleep(1.1)   # Nominatim: max ~1 request/second
+        try:
+            cand_by_pid[pid] = find_candidates(park, anchor)
+        except requests.RequestException as e:
+            print(f"• {pid}: Overpass error finding polygon: {e}")
+            cand_by_pid[pid] = []
+        time.sleep(REQUEST_PAUSE)
+
+    # 2) Assign polygons (score-based, containment dominates, no shared feature).
+    assigned = assign_polygons(parks, cand_by_pid)
+
+    # 3) Build cache entries. Confident polygon → use its coords/area/benches.
+    #    Otherwise use the geocoded anchor for the location (falling back to the
+    #    seed only if geocoding failed). Quiet and Shade are always computed from
+    #    the centre point, so even non-polygon parks get real Quiet + Shade.
     for park in parks:
         pid = park["id"]
         print(f"• {pid} ({park['name']})")
-        try:
-            best = find_polygon(park)
-        except requests.RequestException as e:
-            print(f"    Overpass error, skipping: {e}")
+        entry = {"fetched_at": time.strftime("%Y-%m-%d")}
+        a = assigned.get(pid)
+
+        if a:
+            entry.update({
+                "lat": round(a["centroid"]["lat"], 7),
+                "lon": round(a["centroid"]["lon"], 7),
+                "area_ha": round(a["area_ha"], 1),
+                "osm_type": a["osm_type"], "osm_id": a["osm_id"],
+                "matched_name": a["name"],
+            })
             time.sleep(REQUEST_PAUSE)
-            continue
-
-        if not best:
-            print("    no matching polygon found — keeping seed values")
-            time.sleep(REQUEST_PAUSE)
-            continue
+            b = fetch_benches(a["ring"])
+            if b is not None:
+                entry["bench_count"] = b
+            center = a["centroid"]
+        elif anchors.get(pid):
+            # No polygon, but Nominatim gave us an authoritative point.
+            anchor = anchors[pid]
+            entry["lat"], entry["lon"] = anchor["lat"], anchor["lon"]
+            print("    no polygon — using geocoded location (area/benches stay seed)")
+            center = anchor
+        else:
+            print("    no polygon or geocode — keeping seed coords/area/benches")
+            center = {"lat": park["lat"], "lon": park["lon"]}
 
         time.sleep(REQUEST_PAUSE)
-        benches, shade = fetch_inside(best["ring"], best["area_ha"])
-        time.sleep(REQUEST_PAUSE)
-        quiet = estimate_quiet(best["centroid"])
+        q = estimate_quiet(center)
+        if q is not None:
+            entry["quiet_score"] = q
 
-        cache[pid] = {
-            "lat": round(best["centroid"]["lat"], 7),
-            "lon": round(best["centroid"]["lon"], 7),
-            "area_ha": round(best["area_ha"], 1),
-            "bench_count": benches,
-            "shade_score": shade,
-            "quiet_score": quiet,
-            "osm_type": best["osm_type"],
-            "osm_id": best["osm_id"],
-            "matched_name": best["name"],
-            "fetched_at": time.strftime("%Y-%m-%d"),
-        }
-        print(f"    centroid ({cache[pid]['lat']}, {cache[pid]['lon']}) · "
-              f"{cache[pid]['area_ha']} ha · {benches} benches · "
-              f"shade {shade}/10 · quiet {quiet}/10 · matched \"{best['name']}\"")
         time.sleep(REQUEST_PAUSE)
+        shade, ndvi = compute_shade(center["lat"], center["lon"])
+        if shade is not None:
+            entry["shade_score"] = shade
+            shade_txt = f"{shade}/10 (NDVI {ndvi})"
+        else:
+            shade_txt = "seed (NDVI unavailable)"
+
+        cache[pid] = entry
+        print(f"    ({entry.get('lat', 'seed')}, {entry.get('lon', 'seed')}) · "
+              f"{entry.get('area_ha', 'seed')} ha · {entry.get('bench_count', 'seed')} benches · "
+              f"shade {shade_txt} · quiet {entry.get('quiet_score', '?')}/10 · "
+              f"matched \"{a['name'] if a else '—'}\"")
 
     os.makedirs(os.path.dirname(CACHE_FILE), exist_ok=True)
     with open(CACHE_FILE, "w", encoding="utf-8") as f:

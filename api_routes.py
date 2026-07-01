@@ -178,119 +178,20 @@ def _copernicus_auth():
 
 @api_bp.route('/api/shade')
 def shade():
-    """
-    Estimate tree-cover / shade for a park using Sentinel-2 NDVI.
-
-    Query params:
-        lat  — park latitude  (required)
-        lon  — park longitude (required)
-
-    Response:
-        { ndvi_mean, ndvi_max, shade_score }
-
-    shade_score is 1–10, derived from average NDVI:
-        NDVI < 0.2  → sparse vegetation → 1–2
-        NDVI 0.2–0.4 → moderate         → 3–5
-        NDVI 0.4–0.6 → good canopy      → 6–8
-        NDVI > 0.6  → dense forest      → 9–10
-
-    Uses the Sentinel Hub Process API to request a small NDVI tile
-    for a ~200 m box around the park centre, from the most recent
-    cloud-free Sentinel-2 scene.
-    """
+    """Estimate canopy/shade for a park from Sentinel-2 NDVI (Statistical API)."""
     try:
         lat = float(request.args['lat'])
         lon = float(request.args['lon'])
     except (KeyError, ValueError):
         return jsonify(error='lat and lon are required'), 400
-
     try:
-        token = _copernicus_auth()
-    except RuntimeError as e:
-        return jsonify(error=str(e)), 500
-
-    # 200 m bounding box around centre
-    d = 0.002  # ~200 m in degrees at 50° N
-    bbox = [lon - d, lat - d, lon + d, lat + d]
-
-    evalscript = """
-    //VERSION=3
-    function setup() {
-      return { input: ["B04", "B08"], output: { bands: 1, sampleType: "FLOAT32" } };
-    }
-    function evaluatePixel(s) {
-      return [(s.B08 - s.B04) / (s.B08 + s.B04 + 0.001)];
-    }
-    """
-
-    payload = {
-        "input": {
-            "bounds": {"bbox": bbox, "properties": {"crs": "http://www.opengis.net/def/crs/EPSG/0/4326"}},
-            "data": [{
-                "type": "sentinel-2-l2a",
-                "dataFilter": {"maxCloudCoverage": 20},
-                "mosaickingOrder": "leastRecent"
-            }]
-        },
-        "output": {
-            "width": 64, "height": 64,
-            "responses": [{"identifier": "default", "format": {"type": "image/tiff"}}]
-        },
-        "evalscript": evalscript
-    }
-
-    try:
-        resp = requests.post(
-            'https://sh.dataspace.copernicus.eu/api/v1/process',
-            json=payload,
-            headers={'Authorization': f'Bearer {token}'},
-            timeout=30
-        )
-        resp.raise_for_status()
-
-        # Parse the GeoTIFF pixel values (simple: raw float32 bytes)
-        import struct
-        # Skip TIFF header, read raw float32 values
-        # For a robust solution use rasterio, but this works for a 64x64 tile
-        raw = resp.content
-        n = 64 * 64
-        # Try to find float32 data in the response
-        values = []
-        offset = len(raw) - n * 4  # float32 data at end of TIFF
-        if offset > 0:
-            for i in range(n):
-                v = struct.unpack('<f', raw[offset + i*4 : offset + i*4 + 4])[0]
-                if -1 <= v <= 1:
-                    values.append(v)
-
-        if not values:
-            return jsonify(error='Could not parse NDVI data', shade_score=5)
-
-        ndvi_mean = sum(values) / len(values)
-        ndvi_max = max(values)
-
-        # Convert to 1–10 shade score
-        if ndvi_mean < 0.15:
-            shade_score = 1
-        elif ndvi_mean < 0.25:
-            shade_score = 3
-        elif ndvi_mean < 0.35:
-            shade_score = 5
-        elif ndvi_mean < 0.45:
-            shade_score = 7
-        elif ndvi_mean < 0.55:
-            shade_score = 8
-        else:
-            shade_score = min(10, round(8 + (ndvi_mean - 0.55) * 10))
-
-        return jsonify(
-            ndvi_mean=round(ndvi_mean, 3),
-            ndvi_max=round(ndvi_max, 3),
-            shade_score=shade_score
-        )
-
+        from ndvi_shade import compute_shade
+        score, ndvi_mean = compute_shade(lat, lon)
+        if score is None:
+            return jsonify(error='NDVI unavailable', shade_score=None), 200
+        return jsonify(ndvi_mean=ndvi_mean, shade_score=score)
     except Exception as e:
-        return jsonify(error=str(e), shade_score=5), 500
+        return jsonify(error=str(e), shade_score=None), 500
 
 # ────────────────────────────────────────────
 # PARKS — serve the shared park metadata file

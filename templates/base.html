@@ -4,6 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}CoolPark Bamberg{% endblock %}</title>
+    <script>
+        // Apply saved theme before paint to avoid a flash.
+        (function () {
+            try {
+                if (localStorage.getItem('cp_theme') === 'dark')
+                    document.documentElement.setAttribute('data-theme', 'dark');
+            } catch (e) {}
+        })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
@@ -25,6 +34,7 @@
         </nav>
 
         <div class="header-right">
+            <button class="theme-toggle" id="theme-toggle" title="Toggle dark mode" aria-label="Toggle dark mode">🌙</button>
             <span class="header-weather" id="header-weather" title="Live temperature in Bamberg">🌤️ —</span>
             {% if current_user %}
                 <a href="{{ url_for('auth.profile') }}" class="avatar {{ 'active' if active == 'profile' }}" title="{{ current_user['email'] }}">{{ current_user['email'][0]|upper }}</a>

@@ -482,3 +482,51 @@ async function loadHeaderWeather() {
 
 // Header weather runs on every page automatically.
 document.addEventListener('DOMContentLoaded', loadHeaderWeather);
+
+/* ============================================================
+   INFO BUBBLES  (ⓘ next to section titles, all pages)
+   ============================================================ */
+document.addEventListener('click', e => {
+    const btn = e.target.closest('.info-btn');
+    if (btn) {
+        e.stopPropagation();
+        const pop = document.getElementById('info-' + btn.dataset.info);
+        if (pop) {
+            const willShow = pop.hidden;
+            document.querySelectorAll('.info-pop').forEach(p => { p.hidden = true; });
+            pop.hidden = !willShow;
+        }
+        return;
+    }
+    // Click anywhere else closes any open bubble.
+    document.querySelectorAll('.info-pop:not([hidden])').forEach(p => {
+        if (!p.contains(e.target)) p.hidden = true;
+    });
+});
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') document.querySelectorAll('.info-pop').forEach(p => { p.hidden = true; });
+});
+
+/* ============================================================
+   DARK MODE toggle
+   ============================================================ */
+(function () {
+    function currentTheme() {
+        return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+    }
+    function setIcon(btn) {
+        if (btn) btn.textContent = currentTheme() === 'dark' ? '☀️' : '🌙';
+    }
+    document.addEventListener('DOMContentLoaded', () => {
+        const btn = document.getElementById('theme-toggle');
+        if (!btn) return;
+        setIcon(btn);
+        btn.addEventListener('click', () => {
+            const next = currentTheme() === 'dark' ? 'light' : 'dark';
+            if (next === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+            else document.documentElement.removeAttribute('data-theme');
+            try { localStorage.setItem('cp_theme', next); } catch (e) {}
+            setIcon(btn);
+        });
+    });
+})();

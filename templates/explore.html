@@ -10,7 +10,19 @@
     <!-- SIDEBAR -->
     <aside class="sidebar">
         <div class="sidebar-section">
-            <div class="sidebar-title">Park conditions</div>
+            <div class="sidebar-title">Park conditions
+                <button class="info-btn" data-info="conditions" aria-label="What do these conditions mean?">i</button>
+            </div>
+            <div class="info-pop" id="info-conditions" hidden>
+                <div class="info-pop-title">What the conditions mean</div>
+                <ul>
+                    <li><b>🌳 Shade</b> — tree-canopy cover, measured from satellite vegetation (Sentinel-2 NDVI). Higher = more shade and cooler in summer.</li>
+                    <li><b>🤫 Quiet</b> — how far the park is from busy roads. Higher = quieter.</li>
+                    <li><b>🪑 Benches</b> — how many benches the park has (counted from OpenStreetMap).</li>
+                    <li><b>🏞️ Park size</b> — how large the park is, in hectares.</li>
+                </ul>
+                <div class="info-pop-foot">Pick the ones that matter to you — parks are ranked by your choices.</div>
+            </div>
             <p class="sidebar-hint">Pick what matters to you. Parks are ranked by your choices.</p>
             <div class="filter-grid" id="condition-filters">
                 <button class="filter-btn" data-filter="shade" title="Tree cover, measured from satellite vegetation">

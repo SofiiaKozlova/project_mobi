@@ -559,7 +559,7 @@ header {
     border-radius: 6px;
     padding: 6px 10px;
     border: 1px solid var(--sand);
-    background: white;
+    background: var(--white);
     box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
 
@@ -1035,7 +1035,7 @@ header {
     font-size: 0.82rem; 
     color: var(--text);
     padding: 6px 10px; 
-    background: white;
+    background: var(--white);
     border-left: 3px solid var(--sky);
     border-radius: var(--radius-sm);
 }
@@ -1263,7 +1263,7 @@ a.park-card { text-decoration: none; color: inherit; display: block; }
 .date-input {
     width: 100%; padding: 12px 14px;
     border: 1px solid #d7e3d7; border-radius: var(--radius);
-    background: #fff; font-size: 0.95rem; font-family: inherit;
+    background: var(--white); font-size: 0.95rem; font-family: inherit;
     transition: 0.2s; box-sizing: border-box;
 }
 .date-input:focus { outline: none; border-color: var(--green-mid); box-shadow: 0 0 0 3px rgba(74,124,47,0.15); }
@@ -1409,3 +1409,85 @@ textarea.date-input { min-height: 120px; resize: vertical; }
 .live-rain.wet { background: #e8f0f7; }
 .live-rain-icon { font-size: 1.1rem; }
 .poi-radius-note { font-size: 0.74rem; color: var(--text-muted); margin: 0 0 10px; }
+
+/* ── Info bubbles (ⓘ) ── */
+.sidebar-title, .detail-section-title { position: relative; }
+.info-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 16px; height: 16px; margin-left: 6px; padding: 0;
+    border: none; border-radius: 50%; cursor: pointer;
+    background: var(--green-mid); color: #fff;
+    font-family: Georgia, 'Times New Roman', serif; font-style: italic;
+    font-size: 11px; font-weight: 700; line-height: 1; vertical-align: middle;
+    transition: 0.15s;
+}
+.info-btn:hover { background: var(--green-dark); }
+.info-pop {
+    position: relative;
+    margin: 8px 0 4px;
+    background: var(--white);
+    border: 1px solid var(--sand);
+    border-left: 3px solid var(--green-mid);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    box-shadow: 0 6px 20px var(--shadow);
+    font-size: 0.8rem;
+    line-height: 1.5;
+    color: var(--text);
+    z-index: 20;
+}
+.info-pop-title { font-weight: 600; color: var(--green-dark); margin-bottom: 6px; }
+.info-pop ul { margin: 0; padding-left: 1.1em; }
+.info-pop li { margin-bottom: 5px; }
+.info-pop li b { color: var(--green-dark); font-weight: 600; }
+.info-pop-foot { margin-top: 8px; color: var(--text-muted); font-size: 0.75rem; }
+
+/* ============================================================
+   DARK MODE  (toggled via [data-theme="dark"] on <html>)
+   ============================================================ */
+[data-theme="dark"] {
+    --green-dark: #cfe3bd;      /* light greens for text on dark */
+    --green-mid: #8fca66;
+    --green-light: #6ea844;
+    --green-pale: #24311c;      /* dark green tint for accent fills */
+    --cream: #14170f;           /* page background */
+    --sand: #333a2c;            /* borders/dividers */
+    --brown: #b99a76;
+    --sky: #7bb8d4;
+    --sky-pale: #1b2a33;
+    --text: #e7ecdf;
+    --text-muted: #9fb08f;
+    --white: #1d2117;           /* card / surface background */
+    --shadow: rgba(0, 0, 0, 0.45);
+}
+
+/* Header stays dark-green in both themes; nudge it slightly in dark. */
+[data-theme="dark"] .site-header { background: #10130c; }
+
+/* Inputs: fix the light hardcoded border + placeholder contrast. */
+[data-theme="dark"] .date-input { border-color: var(--sand); color: var(--text); }
+[data-theme="dark"] .date-input::placeholder { color: #7f8f72; }
+
+/* Score banners / pale panels */
+[data-theme="dark"] .score-banner { background: var(--green-pale); color: var(--text); }
+
+/* Map: darken the OSM tiles so a bright map doesn't glare in dark mode. */
+[data-theme="dark"] .leaflet-tile { filter: brightness(0.7) invert(1) hue-rotate(180deg) saturate(0.7); }
+[data-theme="dark"] .leaflet-container { background: #0c0e08; }
+[data-theme="dark"] .leaflet-bar a,
+[data-theme="dark"] .leaflet-control-attribution {
+    background: var(--white) !important; color: var(--text) !important;
+}
+[data-theme="dark"] .leaflet-control-attribution a { color: var(--green-mid) !important; }
+
+/* Popups / info bubbles pick up --white automatically; just soften borders. */
+[data-theme="dark"] .info-pop { border-color: var(--sand); }
+
+/* Theme toggle button in the header */
+.theme-toggle {
+    background: rgba(255,255,255,0.12); border: none; cursor: pointer;
+    width: 34px; height: 34px; border-radius: 50%; color: #fff;
+    font-size: 15px; line-height: 1; display: inline-flex;
+    align-items: center; justify-content: center; transition: 0.18s; flex-shrink: 0;
+}
+.theme-toggle:hover { background: rgba(255,255,255,0.22); }
