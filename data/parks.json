@@ -4,129 +4,298 @@
     "name": "Hain",
     "district": "Inselstadt - south, along the Regnitz",
     "desc": "Bamberg's beloved 48-hectare riverside park in the south of the Inselstadt. Ancient plane trees provide dense canopy, making it ideal on hot summer days. Contains a botanical garden, a pond, and the Leinritt towpath along the Regnitz.",
-    "lat": 49.8810027, "lon": 10.8947922,
-    "conditions": {"shade": 9, "quiet": 7, "benches": 9, "park_size": 8},
-    "facts": {"bench_count": 60, "area_ha": 48.0},
-    "data_source": {"area_ha": "from description", "bench_count": "placeholder", "lat_lon": "manual"}
+    "lat": 49.8810027,
+    "lon": 10.8947922,
+    "conditions": {
+      "shade": 9,
+      "quiet": 7,
+      "benches": 9,
+      "park_size": 8
+    },
+    "facts": {
+      "bench_count": 60,
+      "area_ha": 48.0
+    },
+    "data_source": {
+      "area_ha": "from description",
+      "bench_count": "placeholder",
+      "lat_lon": "manual"
+    }
   },
   {
     "id": "erba",
     "name": "ERBA-Park",
     "district": "Gaustadt - north, former Landesgartenschau 2012",
     "desc": "A 13.5-hectare park on the northern tip of the Regnitz Island, built on the former ERBA cotton-mill site for the 2012 Bavarian State Garden Show. Five playgrounds, open lawns, a sculpture park, and breezy waterfront on both Regnitz arms.",
-    "lat": 49.9031637, "lon": 10.8696083,
-    "conditions": {"shade": 4, "quiet": 5, "benches": 8, "park_size": 5},
-    "facts": {"bench_count": 45, "area_ha": 13.5},
-    "data_source": {"area_ha": "from description", "bench_count": "placeholder", "lat_lon": "manual"}
+    "lat": 49.9031637,
+    "lon": 10.8696083,
+    "conditions": {
+      "shade": 4,
+      "quiet": 5,
+      "benches": 8,
+      "park_size": 5
+    },
+    "facts": {
+      "bench_count": 45,
+      "area_ha": 13.5
+    },
+    "data_source": {
+      "area_ha": "from description",
+      "bench_count": "placeholder",
+      "lat_lon": "manual"
+    }
   },
   {
     "id": "rosengarten",
     "name": "Rosengarten",
     "district": "Bergstadt - Neue Residenz courtyard",
     "desc": "A baroque rose garden in the inner courtyard of the Neue Residenz, redesigned in 1733 by Balthasar Neumann. Around 4,500 roses in 48 varieties, framed by linden trees and box hedges. Stunning views over the Altstadt and Kloster Michelsberg.",
-    "lat": 49.8920232, "lon": 10.8792782,
-    "conditions": {"shade": 5, "quiet": 8, "benches": 7, "park_size": 3},
-    "facts": {"bench_count": 30, "area_ha": 1.2},
-    "data_source": {"area_ha": "placeholder", "bench_count": "placeholder", "lat_lon": "manual"}
+    "lat": 49.8920232,
+    "lon": 10.8792782,
+    "conditions": {
+      "shade": 5,
+      "quiet": 8,
+      "benches": 7,
+      "park_size": 3
+    },
+    "facts": {
+      "bench_count": 30,
+      "area_ha": 1.2
+    },
+    "data_source": {
+      "area_ha": "placeholder",
+      "bench_count": "placeholder",
+      "lat_lon": "manual"
+    }
   },
   {
     "id": "michelsberg",
     "name": "Michelsberg gardens",
     "district": "Bergstadt - St. Michael monastery hill",
     "desc": "The terraced gardens of the former Benedictine monastery of St. Michael offer sweeping views across the city's red rooftops and the cathedral. The walled garden is quiet and partly shaded, with a herb garden and old monastery orchards.",
-    "lat": 49.8939329, "lon": 10.8781232,
-    "conditions": {"shade": 6, "quiet": 9, "benches": 6, "park_size": 4},
-    "facts": {"bench_count": 22, "area_ha": 2.5},
-    "data_source": {"area_ha": "placeholder", "bench_count": "placeholder", "lat_lon": "manual"}
+    "lat": 49.8939329,
+    "lon": 10.8781232,
+    "conditions": {
+      "shade": 6,
+      "quiet": 9,
+      "benches": 6,
+      "park_size": 4
+    },
+    "facts": {
+      "bench_count": 22,
+      "area_ha": 2.5
+    },
+    "data_source": {
+      "area_ha": "placeholder",
+      "bench_count": "placeholder",
+      "lat_lon": "manual"
+    }
   },
   {
     "id": "volkspark",
     "name": "Volkspark (Nordpark)",
     "district": "Gaustadt - northwest",
     "desc": "Bamberg's newest large green space, developed north of the ERBA-Park. Extensive sports and play facilities, open meadows, and good cycling connections along the Regnitz. Popular with families and sports clubs.",
-    "lat": 49.9000572, "lon": 10.9271075,
-    "conditions": {"shade": 3, "quiet": 5, "benches": 7, "park_size": 7},
-    "facts": {"bench_count": 38, "area_ha": 20.0},
-    "data_source": {"area_ha": "placeholder", "bench_count": "placeholder", "lat_lon": "manual"}
+    "lat": 49.9000572,
+    "lon": 10.9271075,
+    "conditions": {
+      "shade": 3,
+      "quiet": 5,
+      "benches": 7,
+      "park_size": 7
+    },
+    "facts": {
+      "bench_count": 38,
+      "area_ha": 20.0
+    },
+    "data_source": {
+      "area_ha": "placeholder",
+      "bench_count": "placeholder",
+      "lat_lon": "manual"
+    }
   },
   {
     "id": "domberg",
     "name": "Domplatz & cathedral gardens",
     "district": "Bergstadt - cathedral hill",
     "desc": "The open square and green terraces around Bamberg's UNESCO-listed cathedral. Well-maintained paths wind past hedges with views over the Regnitz valley. Partially sheltered from wind by the old episcopal buildings.",
-    "lat": 49.8909071, "lon": 10.8825875,
-    "conditions": {"shade": 2, "quiet": 7, "benches": 5, "park_size": 6},
-    "facts": {"bench_count": 18, "area_ha": 3.0},
-    "data_source": {"area_ha": "placeholder", "bench_count": "placeholder", "lat_lon": "manual"}
+    "lat": 49.8909071,
+    "lon": 10.8825875,
+    "conditions": {
+      "shade": 2,
+      "quiet": 7,
+      "benches": 5,
+      "park_size": 6
+    },
+    "facts": {
+      "bench_count": 18,
+      "area_ha": 3.0
+    },
+    "data_source": {
+      "area_ha": "placeholder",
+      "bench_count": "placeholder",
+      "lat_lon": "manual"
+    }
   },
   {
     "id": "leinritt",
     "name": "Leinritt meadows",
     "district": "Along the Regnitz - north park towpath",
     "desc": "The historic Leinritt towpath runs along the Regnitz north of the Hain. Flat, open meadows loved by cyclists, joggers and kite-flyers. Virtually no shade, but a constant river breeze and clear views of Klein-Venedig.",
-    "lat": 49.893038, "lon": 10.8831939,
-    "conditions": {"shade": 2, "quiet": 7, "benches": 4, "park_size": 6},
-    "facts": {"bench_count": 12, "area_ha": 5.0},
-    "data_source": {"area_ha": "placeholder", "bench_count": "placeholder", "lat_lon": "manual"}
+    "lat": 49.893038,
+    "lon": 10.8831939,
+    "conditions": {
+      "shade": 2,
+      "quiet": 7,
+      "benches": 4,
+      "park_size": 6
+    },
+    "facts": {
+      "bench_count": 12,
+      "area_ha": 5.0
+    },
+    "data_source": {
+      "area_ha": "placeholder",
+      "bench_count": "placeholder",
+      "lat_lon": "manual"
+    }
   },
   {
     "id": "hauptsmoor",
     "name": "Hauptsmoorwald",
     "district": "East Bamberg - city forest",
     "desc": "Bamberg's extensive city forest east of the centre. Tall pines and oaks create almost total canopy - cool even in high summer. Many walking and cycling trails, picnic spots, and a forester's lodge.",
-    "lat": 49.8874811, "lon": 10.9361961,
-    "conditions": {"shade": 10, "quiet": 9, "benches": 5, "park_size": 10},
-    "facts": {"bench_count": 25, "area_ha": 1000.0},
-    "data_source": {"area_ha": "placeholder", "bench_count": "placeholder", "lat_lon": "manual"}
+    "lat": 49.8874811,
+    "lon": 10.9361961,
+    "conditions": {
+      "shade": 10,
+      "quiet": 9,
+      "benches": 5,
+      "park_size": 10
+    },
+    "facts": {
+      "bench_count": 25,
+      "area_ha": 1000.0
+    },
+    "data_source": {
+      "area_ha": "placeholder",
+      "bench_count": "placeholder",
+      "lat_lon": "manual"
+    }
   },
   {
     "id": "jakobsberg",
     "name": "Jakobsberg & vineyards",
     "district": "West Bamberg - hillside vineyard paths",
     "desc": "South-facing hillside vineyard paths west of the old town. Sunny and warm with a constant gentle breeze from the exposed slope. Terraced trails lead up towards the Altenburg fortress with panoramic views.",
-    "lat": 49.8946, "lon": 10.8758,
-    "conditions": {"shade": 3, "quiet": 8, "benches": 3, "park_size": 6},
-    "facts": {"bench_count": 8, "area_ha": 8.0},
-    "data_source": {"area_ha": "placeholder", "bench_count": "placeholder", "lat_lon": "manual"}
+    "lat": 49.8946,
+    "lon": 10.8758,
+    "conditions": {
+      "shade": 3,
+      "quiet": 8,
+      "benches": 3,
+      "park_size": 6
+    },
+    "facts": {
+      "bench_count": 8,
+      "area_ha": 8.0
+    },
+    "data_source": {
+      "area_ha": "placeholder",
+      "bench_count": "placeholder",
+      "lat_lon": "manual"
+    }
   },
   {
     "id": "seehof",
     "name": "Schlosspark Seehof",
     "district": "Memmelsdorf - 4 km north of Bamberg",
     "desc": "A 21.9-hectare baroque palace park, once one of Germany's most famous rococo gardens. The Bavarian State owns it and has restored the cascades and parterres. Open April-October. Classical concerts held here in summer.",
-    "lat": 49.9271324, "lon": 10.9450048,
-    "conditions": {"shade": 6, "quiet": 9, "benches": 7, "park_size": 7},
-    "facts": {"bench_count": 40, "area_ha": 21.9},
-    "data_source": {"area_ha": "from description", "bench_count": "placeholder", "lat_lon": "manual"}
+    "lat": 49.9271324,
+    "lon": 10.9450048,
+    "conditions": {
+      "shade": 6,
+      "quiet": 9,
+      "benches": 7,
+      "park_size": 7
+    },
+    "facts": {
+      "bench_count": 40,
+      "area_ha": 21.9
+    },
+    "data_source": {
+      "area_ha": "from description",
+      "bench_count": "placeholder",
+      "lat_lon": "manual"
+    }
   },
   {
     "id": "altenburg",
     "name": "Altenburg castle park",
     "district": "West Bamberg - Altenburg hill, 386 m",
     "desc": "The wooded grounds around Bamberg's medieval Altenburg fortress, perched on the highest of the city's seven hills. Shaded forest paths wind up to breathtaking panoramic views over the Regnitz valley and the Steigerwald.",
-    "lat": 49.8806777, "lon": 10.8645102,
-    "conditions": {"shade": 8, "quiet": 10, "benches": 4, "park_size": 5},
-    "facts": {"bench_count": 14, "area_ha": 6.0},
-    "data_source": {"area_ha": "placeholder", "bench_count": "placeholder", "lat_lon": "manual"}
+    "lat": 49.8806777,
+    "lon": 10.8645102,
+    "conditions": {
+      "shade": 8,
+      "quiet": 10,
+      "benches": 4,
+      "park_size": 5
+    },
+    "facts": {
+      "bench_count": 14,
+      "area_ha": 6.0
+    },
+    "data_source": {
+      "area_ha": "placeholder",
+      "bench_count": "placeholder",
+      "lat_lon": "manual"
+    }
   },
   {
     "id": "stephansberg",
     "name": "Stephansberg vineyard terraces",
     "district": "Bergstadt - terraced southeast hillside",
     "desc": "South-facing vineyard terraces on the Stephansberg slope above the old town. Quiet stepped paths between historic wine cellars and the Stephanskirche, with sun-drenched benches and far-reaching views toward the Hauptsmoorwald.",
-    "lat": 49.8820044, "lon": 10.8866592,
-    "conditions": {"shade": 3, "quiet": 8, "benches": 4, "park_size": 4},
-    "facts": {"bench_count": 10, "area_ha": 4.0},
-    "data_source": {"area_ha": "placeholder", "bench_count": "placeholder", "lat_lon": "manual"}
+    "lat": 49.8872,
+    "lon": 10.8943,
+    "conditions": {
+      "shade": 3,
+      "quiet": 8,
+      "benches": 4,
+      "park_size": 4
+    },
+    "facts": {
+      "bench_count": 10,
+      "area_ha": 4.0
+    },
+    "data_source": {
+      "area_ha": "placeholder",
+      "bench_count": "placeholder",
+      "lat_lon": "manual"
+    }
   },
   {
     "id": "amkranen",
     "name": "Am Kranen promenade",
     "district": "Inselstadt - riverfront promenade",
     "desc": "The lively riverside promenade along the Regnitz between the Kettenbrücke and the Markusbrücke. Lined with willows and benches, it offers views across to the old fishermen's houses of Klein-Venedig. Popular with students and evening strollers.",
-    "lat": 49.8925659, "lon": 10.8852974,
-    "conditions": {"shade": 4, "quiet": 5, "benches": 6, "park_size": 4},
-    "facts": {"bench_count": 20, "area_ha": 1.5},
-    "data_source": {"area_ha": "placeholder", "bench_count": "placeholder", "lat_lon": "manual"}
+    "lat": 49.8925659,
+    "lon": 10.8852974,
+    "conditions": {
+      "shade": 4,
+      "quiet": 5,
+      "benches": 6,
+      "park_size": 4
+    },
+    "facts": {
+      "bench_count": 20,
+      "area_ha": 1.5
+    },
+    "data_source": {
+      "area_ha": "placeholder",
+      "bench_count": "placeholder",
+      "lat_lon": "manual"
+    }
   }
 ]

@@ -37,7 +37,7 @@ def merge_osm(park, geo):
 
     if g.get("lat") is not None and g.get("lon") is not None:
         park["lat"], park["lon"] = g["lat"], g["lon"]
-        park["data_source"]["lat_lon"] = "osm centroid"
+        park["data_source"]["lat_lon"] = "osm centroid" if g.get("osm_id") else "geocoded"
     if g.get("area_ha") is not None:
         park["facts"]["area_ha"] = g["area_ha"]
         s = size_score(g["area_ha"])

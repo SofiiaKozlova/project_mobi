@@ -240,17 +240,24 @@ def _geocode_nominatim(query, near_lat, near_lon):
 def geocode(name, near_lat, near_lon):
     """
     Resolve a park to authoritative coordinates. Tries Photon first (permissive),
-    then Nominatim. Disambiguates by the result nearest the seed and rejects
-    anything more than 3 km away. Returns {lat, lon} or None.
+    then Nominatim, and retries with just the leading word if the full descriptive
+    name misses (e.g. "Stephansberg vineyard terraces" → "Stephansberg").
+    Disambiguates by the result nearest the seed, rejecting anything >3 km away.
     """
-    query = f"{clean_name(name)} Bamberg"
-    for provider in (_geocode_photon, _geocode_nominatim):
-        try:
-            res = provider(query, near_lat, near_lon)
-            if res:
-                return res
-        except (requests.RequestException, ValueError) as e:
-            print(f"    geocode via {provider.__name__} failed: {e}")
+    cleaned = clean_name(name)
+    queries = [cleaned]
+    first_word = cleaned.split()[0] if cleaned.split() else ""
+    if first_word and first_word.lower() != cleaned.lower():
+        queries.append(first_word)
+
+    for q in queries:
+        for provider in (_geocode_photon, _geocode_nominatim):
+            try:
+                res = provider(f"{q} Bamberg", near_lat, near_lon)
+                if res:
+                    return res
+            except (requests.RequestException, ValueError) as e:
+                print(f"    geocode via {provider.__name__} ('{q}') failed: {e}")
     return None
 
 

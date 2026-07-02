@@ -99,7 +99,9 @@
   "stephansberg": {
     "fetched_at": "2026-07-01",
     "quiet_score": 9,
-    "shade_score": 7
+    "shade_score": 7,
+    "lat": 49.8872,
+    "lon": 10.8943
   },
   "amkranen": {
     "fetched_at": "2026-07-01",
